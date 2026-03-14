@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# Model / large files
+final_model/*.safetensors
+final_model/training_args.bin
+final_model/vocab.json
+
+# IDE files
+.idea/
+
+# Frontend
+node_modules/
+dist/
+
+# OS files
+.DS_Store
+
+# runtime generated files
+uploads/
+processed/
+segments/
+audio/
+outputs/
+
+
