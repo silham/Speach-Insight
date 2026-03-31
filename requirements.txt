@@ -17,3 +17,7 @@ scipy
 
 tqdm
 pandas
+
+# --- Emotion Recognition (Phase 1-6) ---
+vaderSentiment
+scikit-learn

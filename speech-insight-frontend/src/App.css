@@ -5,6 +5,90 @@
   text-align: center;
 }
 
+/* ── Layout ── */
+.app-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.card {
+  padding: 2em;
+}
+
+/* ── Results table ── */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.results-table th,
+.results-table td {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.results-table thead {
+  background: #f9fafb;
+}
+
+.results-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.transcript-cell {
+  max-width: 320px;
+  word-break: break-word;
+}
+
+/* ── Emotion cell ── */
+.emotion-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+/* ── Badges ── */
+.emotion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.emotion-badge .confidence {
+  font-weight: 400;
+  opacity: 0.75;
+  font-size: 0.76rem;
+}
+
+.sarcasm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+
+.ambiguity-indicator {
+  font-size: 0.72rem;
+  color: #6b7280;
+  cursor: help;
+}
+
+/* ── Misc (keep existing Vite defaults) ── */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -19,22 +103,14 @@
 }
 
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
-}
-
-.card {
-  padding: 2em;
 }
 
 .read-the-docs {

@@ -10,6 +10,10 @@ final_model/*.safetensors
 final_model/training_args.bin
 final_model/vocab.json
 
+# Emotion model cache (downloaded at runtime — do not commit)
+emotion/models/
+emotion/checkpoints/
+
 # IDE files
 .idea/
 

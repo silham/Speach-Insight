@@ -9,6 +9,7 @@ import uuid
 # --- Your helper functions ---
 from segmentation import segment_and_save
 from model import load_transcriber
+from emotion import EmotionAnalyzer
 
 UPLOAD_DIR = "uploads"
 AUDIO_DIR = "audio"
@@ -35,9 +36,10 @@ os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 
-# --- Load Transcriber ---
+# --- Load AI Models ---
 print("⏳ Initializing AI Models...")
 transcriber = load_transcriber()
+emotion_analyzer = EmotionAnalyzer()
 
 @app.get("/")
 def home():
@@ -63,7 +65,7 @@ async def analyze_audio(file: UploadFile = File(...)):
     if not clips:
         raise HTTPException(status_code=400, detail="No speech detected")
 
-    # Transcribe
+    # Transcribe + Emotion Analysis
     results = []
     for clip_path in clips:
         text = transcriber.transcribe(clip_path)
@@ -71,11 +73,28 @@ async def analyze_audio(file: UploadFile = File(...)):
         filename_parts = os.path.basename(clip_path).split('_')
         speaker = filename_parts[-1].replace(".wav", "") if "SPEAKER" in filename_parts[-1] else "Unknown"
 
+        # Emotion recognition
+        try:
+            emotion_result = emotion_analyzer.analyze(clip_path, text)
+        except Exception as e:
+            print(f"⚠️ Emotion analysis failed for {clip_path}: {e}")
+            emotion_result = {
+                "emotion": "neutral",
+                "confidence": 0.0,
+                "all_emotions": {},
+                "sarcasm": False,
+                "sarcasm_score": 0.0,
+                "ambiguity_score": 0.0,
+                "vader": {},
+                "paralinguistic": {},
+            }
+
         results.append({
             "speaker": speaker,
             "text": text,
             "audio_url": relative_path,
-            "file_path": clip_path
+            "file_path": clip_path,
+            **emotion_result,
         })
 
     return {"job_id": file_id, "data": results}
