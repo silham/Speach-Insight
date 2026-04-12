@@ -13,6 +13,27 @@ HF_TOKEN = os.environ.get("HF_TOKEN")
 def segment_and_save(input_file, output_folder="segmented_clips"):
     """
     Uses Pyannote to detect WHO is speaking and save their parts.
+
+    Returns
+    -------
+    list[dict]
+        Each entry describes one speaker turn::
+
+            {
+                "segment_id": 0,
+                "path":       "/abs/path/to/seg_000_SPEAKER_00.wav",
+                "speaker":    "SPEAKER_00",
+                "start":      1.23,   # seconds from start of original file
+                "end":        4.56,
+            }
+
+        An empty list is returned if diarization fails or finds nothing.
+
+    Note
+    ----
+    The ``path`` key supersedes the bare ``str`` return that used to be the
+    contract.  All callers (``api.py``, ``app.py``, the pipeline) use
+    ``entry["path"]`` to access the audio file.
     """
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
@@ -31,7 +52,7 @@ def segment_and_save(input_file, output_folder="segmented_clips"):
         print(f"❌ Error loading pipeline: {e}")
         return []
 
-    # --- THE FIX: Format Standardization ---
+    # --- Format Standardization ---
     print("🎵 Standardizing audio format to pure WAV...")
     waveform, sample_rate = torchaudio.load(input_file)
 
@@ -50,7 +71,7 @@ def segment_and_save(input_file, output_folder="segmented_clips"):
         print(f"❌ Diarization failed: {e}")
         return []
 
-    saved_files = []
+    segments = []
     print("✂️ Diarization complete! Slicing turns...")
 
     for i, (turn, _, speaker) in enumerate(
@@ -67,10 +88,16 @@ def segment_and_save(input_file, output_folder="segmented_clips"):
         save_path = os.path.join(output_folder, filename)
 
         torchaudio.save(save_path, segment_waveform, sample_rate)
-        saved_files.append(save_path)
+        segments.append({
+            "segment_id": i,
+            "path": save_path,
+            "speaker": speaker,
+            "start": round(start, 3),
+            "end": round(end, 3),
+        })
 
     # Clean up the temporary WAV file to save space
     if os.path.exists(temp_wav_path):
         os.remove(temp_wav_path)
 
-    return saved_files
+    return segments

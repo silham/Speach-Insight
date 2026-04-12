@@ -6,18 +6,17 @@ import os
 from media_utils import convert_video_to_audio
 import uuid
 
-# --- Your helper functions ---
-from segmentation import segment_and_save
 from model import load_transcriber
 from emotion import EmotionAnalyzer
+from pipeline import AnalysisPipeline
+from pipeline.lead_speaker import StubLeadSpeakerIdentifier
 
 UPLOAD_DIR = "uploads"
-AUDIO_DIR = "audio"
-SEGMENT_DIR = "segments"
-OUTPUT_DIR = "outputs"
+PROCESSED_DIR = "processed"
 
-for folder in [UPLOAD_DIR, AUDIO_DIR, SEGMENT_DIR, OUTPUT_DIR]:
+for folder in [UPLOAD_DIR, PROCESSED_DIR]:
     os.makedirs(folder, exist_ok=True)
+
 app = FastAPI()
 
 # --- CORS ---
@@ -29,25 +28,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-UPLOAD_DIR = "uploads"
-PROCESSED_DIR = "processed"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(PROCESSED_DIR, exist_ok=True)
-
 app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 
-# --- Load AI Models ---
+# --- Load AI Models (once at startup) ---
 print("⏳ Initializing AI Models...")
 transcriber = load_transcriber()
 emotion_analyzer = EmotionAnalyzer()
+
+# Swap StubLeadSpeakerIdentifier for your trained model when ready.
+# The pipeline contract does not change — only this one line.
+lead_speaker = StubLeadSpeakerIdentifier()
+
+pipeline = AnalysisPipeline(
+    transcriber=transcriber,
+    emotion_analyzer=emotion_analyzer,
+    lead_speaker=lead_speaker,
+)
+print("✅ Pipeline ready.")
+
 
 @app.get("/")
 def home():
     return {"status": "SpeechInSight Backend is Running"}
 
+
 @app.post("/analyze")
 async def analyze_audio(file: UploadFile = File(...)):
-    # Save file
+    # ── 1. Save uploaded file ──────────────────────────────────────────
     file_id = str(uuid.uuid4())[:8]
     filename = f"{file_id}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -57,44 +64,28 @@ async def analyze_audio(file: UploadFile = File(...)):
 
     print(f"📂 Processing: {filename}")
 
-    # Segment
-    job_output_folder = os.path.join(PROCESSED_DIR, file_id)
-    file_path = convert_video_to_audio(file_path)
-    clips = segment_and_save(file_path, job_output_folder)
+    # ── 2. Convert video → audio if needed ────────────────────────────
+    audio_path = convert_video_to_audio(file_path)
 
-    if not clips:
+    # ── 3. Run full analysis pipeline ─────────────────────────────────
+    job = pipeline.run(
+        audio_path=audio_path,
+        job_id=file_id,
+        processed_dir=PROCESSED_DIR,
+    )
+
+    if not job.segments:
         raise HTTPException(status_code=400, detail="No speech detected")
 
-    # Transcribe + Emotion Analysis
-    results = []
-    for clip_path in clips:
-        text = transcriber.transcribe(clip_path)
-        relative_path = f"/audio/{file_id}/{os.path.basename(clip_path)}"
-        filename_parts = os.path.basename(clip_path).split('_')
-        speaker = filename_parts[-1].replace(".wav", "") if "SPEAKER" in filename_parts[-1] else "Unknown"
+    # ── 4. Serialise and return ────────────────────────────────────────
+    job_dict = job.to_dict()
 
-        # Emotion recognition
-        try:
-            emotion_result = emotion_analyzer.analyze(clip_path, text)
-        except Exception as e:
-            print(f"⚠️ Emotion analysis failed for {clip_path}: {e}")
-            emotion_result = {
-                "emotion": "neutral",
-                "confidence": 0.0,
-                "all_emotions": {},
-                "sarcasm": False,
-                "sarcasm_score": 0.0,
-                "ambiguity_score": 0.0,
-                "vader": {},
-                "paralinguistic": {},
-            }
-
-        results.append({
-            "speaker": speaker,
-            "text": text,
-            "audio_url": relative_path,
-            "file_path": clip_path,
-            **emotion_result,
-        })
-
-    return {"job_id": file_id, "data": results}
+    # Keep the "data" key the frontend already expects
+    return {
+        "job_id": job_dict["job_id"],
+        "lead_speaker": job_dict["lead_speaker"],
+        "total_speakers": job_dict["total_speakers"],
+        "total_segments": job_dict["total_segments"],
+        "total_duration": job_dict["total_duration"],
+        "data": job_dict["segments"],
+    }

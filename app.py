@@ -59,20 +59,21 @@ if uploaded_file is not None:
             status_text.text("🧠 Step 2: Transcribing speech...")
             results = []
 
-            for i, clip_path in enumerate(clips):
+            for i, clip in enumerate(clips):
+                # clips is now list[dict]: {segment_id, path, speaker, start, end}
+                clip_path = clip["path"]
+                speaker_id = clip["speaker"]
+
                 # Transcribe
                 text = transcriber.transcribe(clip_path)
 
-                # Parse filename to get speaker (seg_001_SPEAKER_00.wav)
-                filename = os.path.basename(clip_path)
-                parts = filename.split('_')
-                speaker_id = f"{parts[2]}_{parts[3].split('.')[0]}" if len(parts) >= 4 else "Unknown"
-
                 results.append({
                     "Speaker": speaker_id,
+                    "Start (s)": clip["start"],
+                    "End (s)": clip["end"],
                     "Transcript": text,
-                    "File": filename,
-                    "Path": clip_path
+                    "File": os.path.basename(clip_path),
+                    "Path": clip_path,
                 })
 
                 # Update progress
@@ -88,7 +89,7 @@ if uploaded_file is not None:
                 df = pd.DataFrame(results)
 
                 # Display colorful table
-                st.dataframe(df[["Speaker", "Transcript"]], use_container_width=True)
+                st.dataframe(df[["Speaker", "Start (s)", "End (s)", "Transcript"]], use_container_width=True)
 
                 # Export Options
                 st.divider()
