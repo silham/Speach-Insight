@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# Model / large files
+final_model/*.safetensors
+final_model/training_args.bin
+final_model/vocab.json
+
+# Emotion model cache (downloaded at runtime — do not commit)
+emotion/models/
+emotion/checkpoints/
+
+# IDE files
+.idea/
+
+# Frontend
+node_modules/
+dist/
+
+# OS files
+.DS_Store
+
+# runtime generated files
+uploads/
+processed/
+segments/
+audio/
+outputs/
+
+# Environment variables
+.env
+
+# Models
+Template_classifier_model/
+
+# Logs
+*.log
+
+# Editor
+.vscode/

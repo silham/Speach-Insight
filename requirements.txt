@@ -1,0 +1,23 @@
+fastapi
+uvicorn
+python-multipart
+
+torch
+torchaudio
+transformers
+
+openai-whisper
+pyannote.audio
+
+librosa
+soundfile
+ffmpeg-python
+numpy
+scipy
+
+tqdm
+pandas
+
+# --- Emotion Recognition (Phase 1-6) ---
+vaderSentiment
+scikit-learn
