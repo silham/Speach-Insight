@@ -13,6 +13,7 @@ const EMOTION_COLORS = {
   neutral:  { bg: '#f3f4f6', text: '#374151', border: '#d1d5db' },
 }
 
+<<<<<<< HEAD
 /* ── Template category colour map ── */
 const TEMPLATE_COLORS = {
   Direct:   { bg: '#fef2f2', text: '#991b1b', border: '#fecaca' },
@@ -23,6 +24,8 @@ const TEMPLATE_COLORS = {
   WarmUp:   { bg: '#fff7ed', text: '#9a3412', border: '#fed7aa' },
 }
 
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 function EmotionBadge({ emotion, confidence }) {
   const colors = EMOTION_COLORS[emotion] || EMOTION_COLORS.neutral
   return (
@@ -35,6 +38,7 @@ function EmotionBadge({ emotion, confidence }) {
   )
 }
 
+<<<<<<< HEAD
 function TemplateBadge({ label, confidence }) {
   if (!label) return <span className="template-badge-empty">—</span>
   const colors = TEMPLATE_COLORS[label] || { bg: '#f3f4f6', text: '#374151', border: '#d1d5db' }
@@ -48,6 +52,8 @@ function TemplateBadge({ label, confidence }) {
   )
 }
 
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 function SarcasmBadge() {
   return <span className="sarcasm-badge">🎭 sarcasm</span>
 }
@@ -118,7 +124,10 @@ function App() {
               <th>Speaker</th>
               <th>Transcript</th>
               <th>Emotion</th>
+<<<<<<< HEAD
               <th>Template</th>
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
               <th>Audio</th>
             </tr>
           </thead>
@@ -132,9 +141,12 @@ function App() {
                   {row.sarcasm && <SarcasmBadge />}
                   <AmbiguityIndicator score={row.ambiguity_score} />
                 </td>
+<<<<<<< HEAD
                 <td className="template-cell">
                   <TemplateBadge label={row.template_label} confidence={row.template_confidence} />
                 </td>
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
                 <td>
                   <audio controls src={`http://127.0.0.1:8000${row.audio_url}`} />
                 </td>

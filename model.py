@@ -1,7 +1,10 @@
 import torch
 import torchaudio
+<<<<<<< HEAD
 import soundfile as sf
 import numpy as np
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 import os
 
@@ -31,6 +34,7 @@ class Transcriber:
             return "Error: Model not loaded."
 
         try:
+<<<<<<< HEAD
             # 1. Load Audio (using soundfile to avoid torchcodec dependency)
             audio_np, sample_rate = sf.read(audio_path)
 
@@ -42,6 +46,10 @@ class Transcriber:
                 waveform = torch.from_numpy(audio_np.T)
             else:
                 waveform = torch.from_numpy(audio_np).unsqueeze(0)
+=======
+            # 1. Load Audio
+            waveform, sample_rate = torchaudio.load(audio_path)
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 
             # 2. Resample to 16kHz (Required by Wav2Vec2)
             if sample_rate != 16000:

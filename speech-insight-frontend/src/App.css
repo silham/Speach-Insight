@@ -88,6 +88,7 @@
   cursor: help;
 }
 
+<<<<<<< HEAD
 /* ── Template badge ── */
 .template-cell {
   white-space: nowrap;
@@ -114,6 +115,8 @@
   color: #9ca3af;
 }
 
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 /* ── Misc (keep existing Vite defaults) ── */
 .logo {
   height: 6em;
@@ -121,16 +124,23 @@
   will-change: filter;
   transition: filter 300ms;
 }
+<<<<<<< HEAD
 
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
 
+=======
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
 @keyframes logo-spin {
+<<<<<<< HEAD
   from {
     transform: rotate(0deg);
   }
@@ -138,6 +148,10 @@
   to {
     transform: rotate(360deg);
   }
+=======
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -148,4 +162,8 @@
 
 .read-the-docs {
   color: #888;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2

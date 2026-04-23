@@ -5,6 +5,7 @@ import shutil
 import os
 from media_utils import convert_video_to_audio
 import uuid
+<<<<<<< HEAD
 from dotenv import load_dotenv
 
 from model import load_transcriber
@@ -14,14 +15,25 @@ from pipeline import AnalysisPipeline
 from pipeline.lead_speaker import StubLeadSpeakerIdentifier
 
 
+=======
+
+from model import load_transcriber
+from emotion import EmotionAnalyzer
+from pipeline import AnalysisPipeline
+from pipeline.lead_speaker import StubLeadSpeakerIdentifier
+
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 UPLOAD_DIR = "uploads"
 PROCESSED_DIR = "processed"
 
 for folder in [UPLOAD_DIR, PROCESSED_DIR]:
     os.makedirs(folder, exist_ok=True)
 
+<<<<<<< HEAD
 load_dotenv()
 
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 app = FastAPI()
 
 # --- CORS ---
@@ -39,7 +51,10 @@ app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 print("⏳ Initializing AI Models...")
 transcriber = load_transcriber()
 emotion_analyzer = EmotionAnalyzer()
+<<<<<<< HEAD
 template_clf = load_template_classifier()
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 
 # Swap StubLeadSpeakerIdentifier for your trained model when ready.
 # The pipeline contract does not change — only this one line.
@@ -48,7 +63,10 @@ lead_speaker = StubLeadSpeakerIdentifier()
 pipeline = AnalysisPipeline(
     transcriber=transcriber,
     emotion_analyzer=emotion_analyzer,
+<<<<<<< HEAD
     template_classifier=template_clf,
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
     lead_speaker=lead_speaker,
 )
 print("✅ Pipeline ready.")

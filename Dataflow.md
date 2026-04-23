@@ -14,8 +14,12 @@
    - [Stage 2 — Speaker Diarization](#stage-2--speaker-diarization)
    - [Stage 3 — Transcription](#stage-3--transcription)
    - [Stage 4 — Emotion Recognition](#stage-4--emotion-recognition)
+<<<<<<< HEAD
    - [Stage 5 — Template Classification](#stage-5--template-classification)
    - [Stage 6 — Lead Speaker Identification ← **Next to build**](#stage-6--lead-speaker-identification)
+=======
+   - [Stage 5 — Lead Speaker Identification ← **Next to build**](#stage-5--lead-speaker-identification)
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 4. [API Response Schema](#4-api-response-schema)
 5. [Adding a New Model](#5-adding-a-new-model)
 6. [Training the Emotion Model](#6-training-the-emotion-model)
@@ -71,6 +75,7 @@
   │                                          └──► Classifier │  .sarcasm / .vader / …
   └──────────────────────────────────────────────────────────┘
          │
+<<<<<<< HEAD
          ▼
   ┌─────────────────────────────────────────────────────────┐
   │  Template Classification       (template_classifier.py) │  fills SegmentResult
@@ -78,6 +83,8 @@
   │                                                         │  .template_confidence
   └─────────────────────────────────────────────────────────┘
          │
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
          │  (all segments resolved → JobResult ready)
          │
          ▼
@@ -146,8 +153,11 @@ Built incrementally — fields are filled by each stage in order.
 | `ambiguity_score` | Emotion | `float` | Shannon entropy, normalised 0–1 |
 | `vader` | Emotion | `dict[str, float]` | `{pos, neg, neu, compound}` |
 | `paralinguistic` | Emotion | `dict[str, float]` | `{pitch, energy, speaking_rate}` |
+<<<<<<< HEAD
 | `template_label` | Template Classification | `str` | Predicted class label |
 | `template_confidence` | Template Classification | `float` | Probability of predicted class |
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 | `extras` | Future models | `dict[str, Any]` | Extensibility hook — see §5 |
 
 ---
@@ -281,6 +291,7 @@ Fields written to `SegmentResult`:
 
 ---
 
+<<<<<<< HEAD
 ### Stage 5 — Template Classification
 
 **File:** `template_classifier.py`
@@ -298,6 +309,9 @@ Classifies the transcribed text into one of a set of pre-defined categories.
 ---
 
 ### Stage 6 — Lead Speaker Identification
+=======
+### Stage 5 — Lead Speaker Identification
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 
 **Package:** `pipeline/lead_speaker/`  
 **Status:** Stub ships with the repo — **this is the next model to build.**
@@ -346,9 +360,13 @@ suggested features for a trained classifier.
       "sarcasm_score": 0.02,
       "ambiguity_score": 0.41,
       "vader": {"pos": 0.45, "neg": 0.0, "neu": 0.55, "compound": 0.61},
+<<<<<<< HEAD
       "paralinguistic": {"pitch": 182.3, "energy": 0.000412, "speaking_rate": 3.1},
       "template_label": "customer_support",
       "template_confidence": 0.89
+=======
+      "paralinguistic": {"pitch": 182.3, "energy": 0.000412, "speaking_rate": 3.1}
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
       // future models write extra keys here (from SegmentResult.extras)
     }
     // ... more segments
@@ -510,8 +528,11 @@ Transcribe_Model/
 │   └── models/                   HuggingFace model cache (gitignored)
 │
 ├── final_model/                  Wav2Vec2 CTC weights (transcription)
+<<<<<<< HEAD
 ├── Template_classifier_model/    Zero-shot classifier weights
 ├── template_classifier.py        Template classification module
+=======
+>>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 ├── processed/                    Per-job audio clip outputs
 ├── uploads/                      Raw uploaded files
 │
