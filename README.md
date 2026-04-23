@@ -15,6 +15,7 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
   - **Linguistic** — BERT (`bert-base-uncased`)
   - **Sentiment** — VADER lexicon
   - **Fusion** — Cross-attention + classifier heads (7 Ekman emotions, sarcasm, ambiguity)
+- Template classification — Zero-shot topic classification per utterance
 - Lead speaker identification (stub ships; see `pipeline/lead_speaker/`)
 - React dashboard with colour-coded emotion badges and audio playback
 
@@ -156,7 +157,9 @@ Upload an audio or video file for full analysis.
       "sarcasm_score": 0.02,
       "ambiguity_score": 0.41,
       "vader": { "pos": 0.45, "neg": 0.0, "neu": 0.55, "compound": 0.61 },
-      "paralinguistic": { "pitch": 182.3, "energy": 0.000412, "speaking_rate": 3.1 }
+      "paralinguistic": { "pitch": 182.3, "energy": 0.000412, "speaking_rate": 3.1 },
+      "template_label": "customer_support",
+      "template_confidence": 0.89
     }
   ]
 }
@@ -193,6 +196,8 @@ Transcribe_Model/
 │   ├── emotion_classifier.py     Classifier heads (emotion, sarcasm)
 │   └── models/                   HuggingFace model cache
 │
+├── template_classifier.py        Template classification module
+├── Template_classifier_model/    Zero-shot classifier weights
 ├── final_model/                  Wav2Vec2 CTC weights (transcription)
 ├── processed/                    Per-job segmented audio clips
 ├── uploads/                      Raw uploaded files
