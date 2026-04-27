@@ -41,11 +41,7 @@
     2,
     2
   ],
-<<<<<<< HEAD
   "ctc_loss_reduction": "mean",
-=======
-  "ctc_loss_reduction": "sum",
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
   "ctc_zero_infinity": false,
   "diversity_loss_weight": 0.1,
   "do_stable_layer_norm": false,
@@ -106,12 +102,8 @@
     1,
     1
   ],
-<<<<<<< HEAD
   "transformers_version": "5.1.0",
   "use_cache": false,
-=======
-  "transformers_version": "4.57.3",
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
   "use_weighted_layer_sum": false,
   "vocab_size": 32,
   "xvector_output_dim": 512

@@ -30,8 +30,8 @@ processed/
 segments/
 audio/
 outputs/
+chroma_db/
 
-<<<<<<< HEAD
 # Environment variables
 .env
 
@@ -43,6 +43,3 @@ Template_classifier_model/
 
 # Editor
 .vscode/
-=======
-
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2

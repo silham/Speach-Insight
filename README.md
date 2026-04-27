@@ -15,12 +15,10 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
   - **Linguistic** — BERT (`bert-base-uncased`)
   - **Sentiment** — VADER lexicon
   - **Fusion** — Cross-attention + classifier heads (7 Ekman emotions, sarcasm, ambiguity)
-<<<<<<< HEAD
 - Template classification — Zero-shot topic classification per utterance
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 - Lead speaker identification (stub ships; see `pipeline/lead_speaker/`)
-- React dashboard with colour-coded emotion badges and audio playback
+- **Knowledge Base (RAG)** — Upload documents (PDF/TXT) and chat with them using Gemini and ChromaDB
+- React dashboard with colour-coded emotion badges, audio playback, and a dedicated RAG chat interface
 
 ---
 
@@ -38,6 +36,8 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
 | vaderSentiment | Lexicon-based sentiment |
 | scikit-learn | Metrics (training phase) |
 | FFmpeg | Video → audio conversion |
+| LangChain + ChromaDB | Vector search / RAG knowledge base |
+| Google Gemini API | RAG LLM engine (`gemini-2.0-flash`) |
 
 ### Frontend
 | Library | Role |
@@ -84,7 +84,15 @@ export HF_TOKEN=hf_...
 
 Add this to your shell profile (`.zshrc`, `.bashrc`) so it persists across sessions.
 
-### 4. Install frontend dependencies
+### 4. Set your Google API Key (for RAG)
+
+Create a `.env` file in the project root:
+```bash
+GOOGLE_API_KEY=your_gemini_api_key
+```
+You can get a free key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+### 5. Install frontend dependencies
 
 ```bash
 cd speech-insight-frontend
@@ -160,19 +168,50 @@ Upload an audio or video file for full analysis.
       "sarcasm_score": 0.02,
       "ambiguity_score": 0.41,
       "vader": { "pos": 0.45, "neg": 0.0, "neu": 0.55, "compound": 0.61 },
-<<<<<<< HEAD
       "paralinguistic": { "pitch": 182.3, "energy": 0.000412, "speaking_rate": 3.1 },
       "template_label": "customer_support",
       "template_confidence": 0.89
-=======
-      "paralinguistic": { "pitch": 182.3, "energy": 0.000412, "speaking_rate": 3.1 }
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
     }
   ]
 }
 ```
 
 Segment audio clips are served statically at `/audio/{job_id}/{filename}`.
+
+### `POST /rag/upload`
+Upload a document (PDF/TXT) to index into the ChromaDB vector store.
+
+**Request:** `multipart/form-data`, field `file`.
+
+**Response:**
+```jsonc
+{
+  "status": "success",
+  "chunks_added": 15,
+  "filename": "document.pdf"
+}
+```
+
+### `POST /rag/ask`
+Query the knowledge base using the Gemini LLM.
+
+**Request:** `application/json`
+```jsonc
+{
+  "query": "What is the document about?"
+}
+```
+
+**Response:**
+```jsonc
+{
+  "answer": "The document is about...",
+  "context": [
+    "chunk text 1",
+    "chunk text 2"
+  ]
+}
+```
 
 ---
 
@@ -183,6 +222,7 @@ Transcribe_Model/
 │
 ├── api.py                        FastAPI server — pipeline entry point
 ├── app.py                        Streamlit developer dashboard
+├── rag.py                        Retrieval-Augmented Generation (RAG) module
 ├── media_utils.py                Video → WAV conversion (FFmpeg)
 ├── model.py                      Wav2Vec2 CTC transcription model
 ├── segmentation.py               Pyannote speaker diarization
@@ -203,11 +243,8 @@ Transcribe_Model/
 │   ├── emotion_classifier.py     Classifier heads (emotion, sarcasm)
 │   └── models/                   HuggingFace model cache
 │
-<<<<<<< HEAD
 ├── template_classifier.py        Template classification module
 ├── Template_classifier_model/    Zero-shot classifier weights
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 ├── final_model/                  Wav2Vec2 CTC weights (transcription)
 ├── processed/                    Per-job segmented audio clips
 ├── uploads/                      Raw uploaded files

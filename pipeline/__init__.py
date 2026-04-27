@@ -36,10 +36,7 @@ Then call per request:
 
 from __future__ import annotations
 
-<<<<<<< HEAD
 import json
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 import os
 from typing import TYPE_CHECKING, Optional
 
@@ -54,13 +51,8 @@ if TYPE_CHECKING:
 
 class AnalysisPipeline:
     """
-<<<<<<< HEAD
     Chains diarization → transcription → emotion → template classification
     → lead-speaker identification and returns a fully-populated :class:`JobResult`.
-=======
-    Chains diarization → transcription → emotion → lead-speaker identification
-    and returns a fully-populated :class:`JobResult`.
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 
     Parameters
     ----------
@@ -68,12 +60,9 @@ class AnalysisPipeline:
         An initialised ``Transcriber`` instance (``model.Transcriber``).
     emotion_analyzer :
         An initialised ``EmotionAnalyzer`` instance (``emotion.EmotionAnalyzer``).
-<<<<<<< HEAD
     template_classifier : optional
         An initialised ``TemplateClassifier`` (``template_classifier.TemplateClassifier``).
         Pass ``None`` to skip template classification.
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
     lead_speaker : optional
         Any object implementing ``LeadSpeakerIdentifier.identify(job)``.
         Pass ``None`` to skip the lead-speaker stage.
@@ -86,19 +75,13 @@ class AnalysisPipeline:
         self,
         transcriber,
         emotion_analyzer,
-<<<<<<< HEAD
         template_classifier=None,
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
         lead_speaker: Optional["LeadSpeakerIdentifier"] = None,
         audio_base_url: str = "/audio",
     ):
         self.transcriber = transcriber
         self.emotion_analyzer = emotion_analyzer
-<<<<<<< HEAD
         self.template_classifier = template_classifier
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
         self.lead_speaker = lead_speaker
         self.audio_base_url = audio_base_url
 
@@ -178,7 +161,6 @@ class AnalysisPipeline:
                 print(f"⚠️  Emotion analysis failed for {seg.audio_path}: {exc}")
                 # Defaults already set by SegmentResult dataclass
 
-<<<<<<< HEAD
         # ── Stage 4: Template Classification ─────────────────────────────
         if self.template_classifier is not None:
             print(f"📋 Classifying {len(job.segments)} segments with template model…")
@@ -192,9 +174,6 @@ class AnalysisPipeline:
             print("✅ Template classification complete.")
 
         # ── Stage 5: Lead Speaker Identification ────────────────────────
-=======
-        # ── Stage 4: Lead Speaker Identification ────────────────────────
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
         if self.lead_speaker is not None:
             print("👤 Identifying lead speaker…")
             try:
@@ -206,7 +185,6 @@ class AnalysisPipeline:
         # ── Finalise aggregate stats ─────────────────────────────────────
         job.finalise()
 
-<<<<<<< HEAD
         # ── Save transcript JSON ─────────────────────────────────────────
         try:
             transcript_data = {
@@ -228,8 +206,6 @@ class AnalysisPipeline:
         except Exception as exc:
             print(f"⚠️  Failed to save transcript JSON: {exc}")
 
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
         print(
             f"✅ Pipeline complete — {job.total_segments} segments, "
             f"{job.total_speakers} speaker(s), "

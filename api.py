@@ -1,11 +1,13 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import shutil
 import os
 from media_utils import convert_video_to_audio
 import uuid
-<<<<<<< HEAD
+
+from rag import add_document_to_db, ask_rag
 from dotenv import load_dotenv
 
 from model import load_transcriber
@@ -13,27 +15,13 @@ from emotion import EmotionAnalyzer
 from template_classifier import load_template_classifier
 from pipeline import AnalysisPipeline
 from pipeline.lead_speaker import StubLeadSpeakerIdentifier
-
-
-=======
-
-from model import load_transcriber
-from emotion import EmotionAnalyzer
-from pipeline import AnalysisPipeline
-from pipeline.lead_speaker import StubLeadSpeakerIdentifier
-
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 UPLOAD_DIR = "uploads"
 PROCESSED_DIR = "processed"
 
 for folder in [UPLOAD_DIR, PROCESSED_DIR]:
     os.makedirs(folder, exist_ok=True)
 
-<<<<<<< HEAD
 load_dotenv()
-
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 app = FastAPI()
 
 # --- CORS ---
@@ -51,10 +39,7 @@ app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 print("⏳ Initializing AI Models...")
 transcriber = load_transcriber()
 emotion_analyzer = EmotionAnalyzer()
-<<<<<<< HEAD
 template_clf = load_template_classifier()
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
 
 # Swap StubLeadSpeakerIdentifier for your trained model when ready.
 # The pipeline contract does not change — only this one line.
@@ -63,10 +48,7 @@ lead_speaker = StubLeadSpeakerIdentifier()
 pipeline = AnalysisPipeline(
     transcriber=transcriber,
     emotion_analyzer=emotion_analyzer,
-<<<<<<< HEAD
     template_classifier=template_clf,
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
     lead_speaker=lead_speaker,
 )
 print("✅ Pipeline ready.")
@@ -114,3 +96,33 @@ async def analyze_audio(file: UploadFile = File(...)):
         "total_duration": job_dict["total_duration"],
         "data": job_dict["segments"],
     }
+
+
+# ── RAG ENDPOINTS ──────────────────────────────────────────
+
+class RAGQuery(BaseModel):
+    query: str
+
+@app.post("/rag/upload")
+async def rag_upload(file: UploadFile = File(...)):
+    # Save uploaded file
+    file_id = str(uuid.uuid4())[:8]
+    filename = f"{file_id}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    try:
+        chunks_added = add_document_to_db(file_path)
+        return {"status": "success", "chunks_added": chunks_added, "filename": file.filename}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/rag/ask")
+async def rag_ask(query: RAGQuery):
+    try:
+        response = ask_rag(query.query)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

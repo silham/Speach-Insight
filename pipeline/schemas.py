@@ -111,13 +111,10 @@ class SegmentResult:
     vader: dict[str, float] = field(default_factory=dict)
     paralinguistic: dict[str, float] = field(default_factory=dict)
 
-<<<<<<< HEAD
     # ── from template classification ──────────────────────────────────
     template_label: str = ""
     template_confidence: float = 0.0
 
-=======
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
     # ── extensibility hook: future models write here ──────────────────
     # e.g.  result.extras["lead_score"] = 0.92
     extras: dict[str, Any] = field(default_factory=dict)

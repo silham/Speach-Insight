@@ -21,3 +21,14 @@ pandas
 # --- Emotion Recognition (Phase 1-6) ---
 vaderSentiment
 scikit-learn
+
+# --- RAG (Retrieval-Augmented Generation) ---
+langchain
+langchain-community
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+chromadb
+sentence-transformers
+pypdf
+python-dotenv

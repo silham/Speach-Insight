@@ -31,7 +31,6 @@
       "rstrip": true,
       "single_word": false,
       "special": false
-<<<<<<< HEAD
     },
     "4": {
       "content": "|",
@@ -51,18 +50,6 @@
   "model_max_length": 1000000000000000019884624838656,
   "pad_token": "<pad>",
   "processor_class": "Wav2Vec2Processor",
-=======
-    }
-  },
-  "bos_token": "<s>",
-  "clean_up_tokenization_spaces": false,
-  "do_lower_case": false,
-  "do_normalize": true,
-  "eos_token": "</s>",
-  "extra_special_tokens": {},
-  "model_max_length": 1000000000000000019884624838656,
-  "pad_token": "<pad>",
->>>>>>> 82a73dc52e8f69a6ab9806ffa9137263868c8bf2
   "replace_word_delimiter_char": " ",
   "return_attention_mask": false,
   "target_lang": null,
