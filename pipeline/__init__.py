@@ -41,6 +41,7 @@ import os
 from typing import TYPE_CHECKING, Optional
 
 from .schemas import JobResult, SegmentMeta, SegmentResult
+from .scoring import generate_score_and_evidence
 
 if TYPE_CHECKING:
     # Avoid circular imports — only used for type hints
@@ -205,6 +206,12 @@ class AnalysisPipeline:
             print(f"💾 Transcript saved to {transcript_path}")
         except Exception as exc:
             print(f"⚠️  Failed to save transcript JSON: {exc}")
+
+        # ── Generate Score and Evidence ──────────────────────────────────
+        try:
+            generate_score_and_evidence(job_output_folder)
+        except Exception as exc:
+            print(f"⚠️  Failed to generate score and evidence: {exc}")
 
         print(
             f"✅ Pipeline complete — {job.total_segments} segments, "
