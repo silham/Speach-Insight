@@ -16,6 +16,7 @@
    - [Stage 4 — Emotion Recognition](#stage-4--emotion-recognition)
    - [Stage 5 — Template Classification](#stage-5--template-classification)
    - [Stage 6 — Lead Speaker Identification ← **Next to build**](#stage-6--lead-speaker-identification)
+   - [Stage 7 — Template Scoring & Evidence](#stage-7--template-scoring--evidence)
 4. [API Response Schema](#4-api-response-schema)
 5. [Adding a New Model](#5-adding-a-new-model)
 6. [Training the Emotion Model](#6-training-the-emotion-model)
@@ -82,10 +83,16 @@
          ▼
   ┌─────────────────────────────────────────────────────────┐
   │  Lead Speaker Identification   (pipeline/lead_speaker/) │  fills JobResult
-  │  ← NEXT TO BUILD                                        │  .lead_speaker
-  │                                                          │
+  │                                                         │  .lead_speaker
+  │                                                         │
   │  StubLeadSpeakerIdentifier  (ships with repo)           │
   │  → picks speaker with most total talking time           │
+  └─────────────────────────────────────────────────────────┘
+         │
+         ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │  Template Scoring & Evidence   (pipeline/scoring.py)    │  generates score.json
+  │  Evaluates chronological template category occurrences  │  and evidence.json
   └─────────────────────────────────────────────────────────┘
          │
          ▼
@@ -345,6 +352,27 @@ suggested features for a trained classifier.
 
 ---
 
+### Stage 7 — Template Scoring & Evidence
+
+**File:** `pipeline/scoring.py`
+
+```
+JobResult (transcript.json saved)
+        │
+        ▼
+generate_score_and_evidence(job_output_folder)
+        │
+        └── writes processed/{job_id}/score.json
+                   processed/{job_id}/evidence.json
+```
+
+Evaluates the `transcript.json` to calculate a 10-point score based on the occurrence and chronological order of template categories.
+- Evaluates `WarmUp` and `Praise` (must appear after WarmUp).
+- Evaluates `PSuggest`, `NSuggest`, `Listen`, and `Direct`.
+- Subtracts points for missing or incorrectly ordered categories.
+
+---
+
 ## 4. API Response Schema
 
 `POST /analyze` returns:
@@ -526,6 +554,7 @@ Transcribe_Model/
 ├── pipeline/                     ← PIPELINE ORCHESTRATION LAYER
 │   ├── __init__.py               AnalysisPipeline class
 │   ├── schemas.py                SegmentMeta, SegmentResult, JobResult
+│   ├── scoring.py                Template category scoring and evidence logic
 │   └── lead_speaker/
 │       └── __init__.py           LeadSpeakerIdentifier ABC + StubLeadSpeakerIdentifier
 │
@@ -538,8 +567,8 @@ Transcribe_Model/
 │   ├── emotion_classifier.py     MultimodalEmotionClassifier + heads
 │   └── models/                   HuggingFace model cache (gitignored)
 │
-├── final_model/                  Wav2Vec2 CTC weights (transcription)
-├── Template_classifier_model/    Zero-shot classifier weights
+├── final_model/                  Wav2Vec2 CTC weights (from Google Drive)
+├── Template_classifier_model/    Zero-shot classifier weights (from Google Drive)
 ├── template_classifier.py        Template classification module
 ├── processed/                    Per-job audio clip outputs
 ├── uploads/                      Raw uploaded files

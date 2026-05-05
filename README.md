@@ -16,6 +16,7 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
   - **Sentiment** — VADER lexicon
   - **Fusion** — Cross-attention + classifier heads (7 Ekman emotions, sarcasm, ambiguity)
 - Template classification — Zero-shot topic classification per utterance
+- **Template Scoring & Evidence** — Automatically calculates a 10-point score based on the chronological appearance of template categories (e.g., WarmUp -> Praise) and generates an evidence report.
 - Lead speaker identification (stub ships; see `pipeline/lead_speaker/`)
 - **Knowledge Base (RAG)** — Upload documents (PDF/TXT) and chat with them using Gemini and ChromaDB
 - React dashboard with colour-coded emotion badges, audio playback, and a dedicated RAG chat interface
@@ -58,14 +59,21 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
 
 ## Setup
 
-### 1. Clone the repo
+### 1. Download Required Models
+
+The models for transcription (`final_model`) and template classification (`Template_classifier_model`) are too large for Git. 
+Please download them from this **[Google Drive Link](https://drive.google.com/drive/folders/17riUj4NUOTFX4QPVl9_gjI2_40A_fh43?usp=sharing)**.
+
+Extract and place the `final_model` and `Template_classifier_model` folders directly in the project root directory.
+
+### 2. Clone the repo
 
 ```bash
 git clone <repo-url>
 cd Transcribe_Model
 ```
 
-### 2. Create a Python virtual environment
+### 3. Create a Python virtual environment
 
 ```bash
 python -m venv .venv
@@ -73,7 +81,7 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Set your Hugging Face token
+### 4. Set your Hugging Face token
 
 The diarization model requires authentication. Create a read token at
 [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) and export it:
@@ -84,7 +92,7 @@ export HF_TOKEN=hf_...
 
 Add this to your shell profile (`.zshrc`, `.bashrc`) so it persists across sessions.
 
-### 4. Set your Google API Key (for RAG)
+### 5. Set your Google API Key (for RAG)
 
 Create a `.env` file in the project root:
 ```bash
@@ -92,7 +100,7 @@ GOOGLE_API_KEY=your_gemini_api_key
 ```
 You can get a free key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 
-### 5. Install frontend dependencies
+### 6. Install frontend dependencies
 
 ```bash
 cd speech-insight-frontend
@@ -231,6 +239,7 @@ Transcribe_Model/
 ├── pipeline/                     Pipeline orchestration layer
 │   ├── __init__.py               AnalysisPipeline — chains all stages
 │   ├── schemas.py                SegmentMeta, SegmentResult, JobResult
+│   ├── scoring.py                Template category scoring and evidence generation
 │   └── lead_speaker/
 │       └── __init__.py           LeadSpeakerIdentifier ABC + working stub
 │
