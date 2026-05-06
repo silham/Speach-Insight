@@ -16,7 +16,7 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
   - **Sentiment** — VADER lexicon
   - **Fusion** — Cross-attention + classifier heads (7 Ekman emotions, sarcasm, ambiguity)
 - Template classification — Zero-shot topic classification per utterance
-- **Template Scoring & Evidence** — Automatically calculates a 10-point score based on the chronological appearance of template categories (e.g., WarmUp -> Praise) and generates an evidence report.
+- **Template & WarmUp Scoring** — Calculates a 10-point template sequencing score, plus a 15-point WarmUp score using RAG knowledge base similarity (10 pts) and Emotion tone metrics (5 pts).
 - Lead speaker identification (stub ships; see `pipeline/lead_speaker/`)
 - **Knowledge Base (RAG)** — Upload documents (PDF/TXT) and chat with them using Gemini and ChromaDB
 - React dashboard with colour-coded emotion badges, audio playback, and a dedicated RAG chat interface

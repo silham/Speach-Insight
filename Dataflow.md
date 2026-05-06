@@ -16,7 +16,7 @@
    - [Stage 4 — Emotion Recognition](#stage-4--emotion-recognition)
    - [Stage 5 — Template Classification](#stage-5--template-classification)
    - [Stage 6 — Lead Speaker Identification ← **Next to build**](#stage-6--lead-speaker-identification)
-   - [Stage 7 — Template Scoring & Evidence](#stage-7--template-scoring--evidence)
+   - [Stage 7 — Template & WarmUp Scoring](#stage-7--template--warmup-scoring)
 4. [API Response Schema](#4-api-response-schema)
 5. [Adding a New Model](#5-adding-a-new-model)
 6. [Training the Emotion Model](#6-training-the-emotion-model)
@@ -91,8 +91,8 @@
          │
          ▼
   ┌─────────────────────────────────────────────────────────┐
-  │  Template Scoring & Evidence   (pipeline/scoring.py)    │  generates score.json
-  │  Evaluates chronological template category occurrences  │  and evidence.json
+  │  Template & WarmUp Scoring   (pipeline/scoring.py)      │  generates score.json
+  │  Evaluates template sequence, RAG similarity & tone     │  and evidence.json
   └─────────────────────────────────────────────────────────┘
          │
          ▼
@@ -352,7 +352,7 @@ suggested features for a trained classifier.
 
 ---
 
-### Stage 7 — Template Scoring & Evidence
+### Stage 7 — Template & WarmUp Scoring
 
 **File:** `pipeline/scoring.py`
 
@@ -366,10 +366,12 @@ generate_score_and_evidence(job_output_folder)
                    processed/{job_id}/evidence.json
 ```
 
-Evaluates the `transcript.json` to calculate a 10-point score based on the occurrence and chronological order of template categories.
-- Evaluates `WarmUp` and `Praise` (must appear after WarmUp).
-- Evaluates `PSuggest`, `NSuggest`, `Listen`, and `Direct`.
-- Subtracts points for missing or incorrectly ordered categories.
+Evaluates the `transcript.json` to calculate the following metrics:
+1. **Template Sequencing (10 points):** Validates the occurrence and chronological order of template categories (`WarmUp`, `Praise`, `PSuggest`, `NSuggest`, `Listen`, `Direct`).
+2. **WarmUp Content Quality (10 points):** Concatenates all `WarmUp` transcripts and queries the ChromaDB vector database using the Gemini LLM. The LLM compares the user's spoken warmup to the company guidelines and returns a similarity percentage alongside actionable suggestions.
+3. **WarmUp Emotion Tone (5 points):** Extracts the emotion confidence scores (Happy, Neutral, Sad, Angry) from the transcript. Evaluates the tone quality mathematically and averages it across all warmup segments.
+
+The resulting evaluations and suggestions are formatted into `score.json` and `evidence.json`.
 
 ---
 
