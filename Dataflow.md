@@ -352,9 +352,10 @@ suggested features for a trained classifier.
 
 ---
 
-### Stage 7 — Template & WarmUp Scoring
+### Stage 7 — Template, WarmUp & Praise Scoring
 
-**File:** `pipeline/scoring.py`
+**File:** `pipeline/scoring.py`  
+**RAG helper:** `rag.py` → `evaluate_categories_with_rag()`
 
 ```
 JobResult (transcript.json saved)
@@ -367,9 +368,14 @@ generate_score_and_evidence(job_output_folder)
 ```
 
 Evaluates the `transcript.json` to calculate the following metrics:
+
 1. **Template Sequencing (10 points):** Validates the occurrence and chronological order of template categories (`WarmUp`, `Praise`, `PSuggest`, `NSuggest`, `Listen`, `Direct`).
-2. **WarmUp Content Quality (10 points):** Concatenates all `WarmUp` transcripts and queries the ChromaDB vector database using the Gemini LLM. The LLM compares the user's spoken warmup to the company guidelines and returns a similarity percentage alongside actionable suggestions.
+2. **WarmUp Content Quality (10 points):** Concatenates all `WarmUp` transcripts and queries the ChromaDB vector database using the Gemini LLM. The LLM compares the user's spoken warmup to the company guidelines and returns a similarity score alongside actionable suggestions.
 3. **WarmUp Emotion Tone (5 points):** Extracts the emotion confidence scores (Happy, Neutral, Sad, Angry) from the transcript. Evaluates the tone quality mathematically and averages it across all warmup segments.
+4. **Praise Content Quality (10 points):** Same approach as WarmUp — filters all `Praise` segments and evaluates them against the RAG knowledge base.
+5. **Praise Emotion Tone (10 points):** Applies Praise-specific emotion rules (Happy: 70% base + 30% confidence, Neutral: 40% base + 30% confidence, others: 0).
+
+> **Optimisation:** WarmUp and Praise RAG scores are evaluated in a **single LLM call** via `evaluate_categories_with_rag()` to minimise API usage and stay within free-tier quotas.
 
 The resulting evaluations and suggestions are formatted into `score.json` and `evidence.json`.
 

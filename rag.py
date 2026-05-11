@@ -101,12 +101,32 @@ Answer:"""
         "context": [doc.page_content for doc in retrieved_docs]
     }
 
-def evaluate_warmup_with_rag(warmup_text: str):
-    """Evaluate warmup text against RAG DB and return JSON with score and suggestions."""
+def evaluate_categories_with_rag(category_texts: dict):
+    """
+    Evaluate multiple category texts against the RAG DB in a SINGLE LLM call.
+
+    Args:
+        category_texts: dict mapping category name to combined transcript text,
+                        e.g. {"warmup": "hello everyone...", "praise": "great work..."}
+
+    Returns:
+        dict mapping category name to {"similarity_score_out_of_10": float, "suggestions": str}
+    """
+    # Build fallback results
+    fallback = {cat: {"similarity_score_out_of_10": 0.0, "suggestions": f"No {cat} segments detected."}
+                for cat in category_texts}
+
+    # Filter out empty categories
+    active_cats = {cat: text for cat, text in category_texts.items() if text.strip()}
+    if not active_cats:
+        return fallback
+
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        print("[WARNING] GOOGLE_API_KEY not set, returning fallback RAG score.")
-        return {"similarity_score_out_of_10": 0.0, "suggestions": "RAG evaluation failed: missing API key."}
+        print("[WARNING] GOOGLE_API_KEY not set, returning fallback RAG scores.")
+        for cat in active_cats:
+            fallback[cat]["suggestions"] = "RAG evaluation failed: missing API key."
+        return fallback
 
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
@@ -115,22 +135,28 @@ def evaluate_warmup_with_rag(warmup_text: str):
     )
 
     vectorstore = get_vectorstore()
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+
+    # Build the category block for the prompt
+    cat_block = "\n".join(
+        f"--- {cat.upper()} ---\n{text}" for cat, text in active_cats.items()
+    )
 
     prompt = ChatPromptTemplate.from_template(
-        """You are an evaluator. Compare the user's warmup text against the following knowledge base context.
-Calculate a similarity score out of 10 based on how well the user followed the recommended warmup guidelines.
-Also provide brief suggestions on how the user can improve based on the context.
+        """You are an evaluator. Compare the user's spoken text for each category against the knowledge base context.
+For EACH category, calculate a similarity score out of 10 based on how well the user followed the recommended guidelines.
+Also provide brief suggestions on how the user can improve for each category.
 
-Context:
+Knowledge Base Context:
 {context}
 
-Warmup Text: {question}
+User's Spoken Text (by category):
+{question}
 
-Return ONLY a valid JSON object matching this schema, without markdown formatting:
+Return ONLY a valid JSON object (no markdown) with one key per category. Example:
 {{
-  "similarity_score_out_of_10": 8.5,
-  "suggestions": "Your suggestion here."
+  "warmup": {{"similarity_score_out_of_10": 8.5, "suggestions": "Your suggestion."}},
+  "praise": {{"similarity_score_out_of_10": 7.0, "suggestions": "Your suggestion."}}
 }}"""
     )
 
@@ -142,22 +168,31 @@ Return ONLY a valid JSON object matching this schema, without markdown formattin
     )
 
     try:
-        response = rag_chain.invoke(warmup_text)
-        # Clean potential markdown block formatting
+        response = rag_chain.invoke(cat_block)
+        # Clean potential markdown formatting
         response = response.strip()
         if response.startswith("```json"):
             response = response[7:-3].strip()
         elif response.startswith("```"):
             response = response[3:-3].strip()
-        
+
         result = json.loads(response)
-        return {
-            "similarity_score_out_of_10": float(result.get("similarity_score_out_of_10", 0.0)),
-            "suggestions": result.get("suggestions", "")
-        }
+
+        for cat in active_cats:
+            cat_result = result.get(cat, {})
+            fallback[cat] = {
+                "similarity_score_out_of_10": float(cat_result.get("similarity_score_out_of_10", 0.0)),
+                "suggestions": cat_result.get("suggestions", "")
+            }
+
+        return fallback
     except Exception as e:
         print(f"[WARNING] RAG evaluation failed: {e}")
         err_msg = str(e)
+        suggestion = "Evaluation failed due to an error."
         if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "Quota" in err_msg:
-            return {"similarity_score_out_of_10": 0.0, "suggestions": "API quota exceeded (please wait a minute and try again)."}
-        return {"similarity_score_out_of_10": 0.0, "suggestions": "Evaluation failed due to an error."}
+            suggestion = "API quota exceeded (please wait a minute and try again)."
+        for cat in active_cats:
+            fallback[cat]["suggestions"] = suggestion
+        return fallback
+
