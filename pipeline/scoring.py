@@ -10,59 +10,59 @@ except ImportError:
     from rag import evaluate_categories_with_rag
 
 
+def _parse_emotion(emotion_str):
+    """Parse emotion string like 'happy 98%' into (label, confidence)."""
+    try:
+        parts = emotion_str.split()
+        label = parts[0].lower()
+        conf = float(parts[1].replace('%', ''))
+        return label, conf
+    except Exception:
+        return "neutral", 0.0
+
+
 def calculate_warmup_emotion_score(emotion_str):
     """
     Calculates score out of 5 based on WarmUp emotion rules.
-    e.g., 'happy 98%' -> parses to 'happy' and 98.
     Happy  -> 80% + balance 20% from confidence
     Neutral-> 50% + balance 30% from confidence
     Sad    -> 30% + balance 20% from confidence
     Others -> 0
     """
-    try:
-        parts = emotion_str.split()
-        label = parts[0].lower()
-        conf = float(parts[1].replace('%', ''))
+    label, conf = _parse_emotion(emotion_str)
 
-        if label == "happy":
-            return ((80 + 0.20 * conf) / 100.0) * 5
-        elif label == "neutral":
-            return ((50 + 0.30 * conf) / 100.0) * 5
-        elif label == "sad":
-            return ((30 + 0.20 * conf) / 100.0) * 5
-        else:
-            return 0.0
-    except Exception:
+    if label == "happy":
+        return ((80 + 0.20 * conf) / 100.0) * 5
+    elif label == "neutral":
+        return ((50 + 0.30 * conf) / 100.0) * 5
+    elif label == "sad":
+        return ((30 + 0.20 * conf) / 100.0) * 5
+    else:
         return 0.0
 
 
 def calculate_praise_emotion_score(emotion_str):
     """
     Calculates score out of 10 based on Praise emotion rules.
-    e.g., 'happy 98%' -> parses to 'happy' and 98.
     Happy   -> 70% + balance 30% from confidence
     Neutral -> 40% + balance 30% from confidence
     Others  -> 0
     """
-    try:
-        parts = emotion_str.split()
-        label = parts[0].lower()
-        conf = float(parts[1].replace('%', ''))
+    label, conf = _parse_emotion(emotion_str)
 
-        if label == "happy":
-            return ((70 + 0.30 * conf) / 100.0) * 10
-        elif label == "neutral":
-            return ((40 + 0.30 * conf) / 100.0) * 10
-        else:
-            return 0.0
-    except Exception:
+    if label == "happy":
+        return ((70 + 0.30 * conf) / 100.0) * 10
+    elif label == "neutral":
+        return ((40 + 0.30 * conf) / 100.0) * 10
+    else:
         return 0.0
 
 
 def generate_score_and_evidence(job_output_folder: str):
     """
     Reads transcript.json from the job_output_folder, calculates template scores,
-    warmup metrics (RAG + Emotion), and praise metrics (RAG + Emotion),
+    warmup metrics (RAG + Emotion), praise metrics (RAG + Emotion),
+    and suggest metrics (RAG + balance + tone penalty),
     then writes score.json and evidence.json.
     """
     transcript_path = os.path.join(job_output_folder, "transcript.json")
@@ -84,23 +84,36 @@ def generate_score_and_evidence(job_output_folder: str):
     warmup_transcripts = []
     warmup_emotion_scores = []
     praise_transcripts = []
+    praise_emotions_raw = []       # store raw emotion strings for Praise
     praise_emotion_scores = []
+    psuggest_transcripts = []
+    nsuggest_transcripts = []
+    suggest_emotions_raw = []      # store raw emotion strings for Suggest
 
     for i, seg in enumerate(segments):
         label = seg.get("template_label")
         if label in category_indices:
             category_indices[label].append(i)
 
+        emotion_str = seg.get("emotion", "neutral 0%")
+
         if label == "WarmUp":
             warmup_transcripts.append(seg.get("transcript", ""))
             warmup_emotion_scores.append(
-                calculate_warmup_emotion_score(seg.get("emotion", "neutral 0%"))
+                calculate_warmup_emotion_score(emotion_str)
             )
         elif label == "Praise":
             praise_transcripts.append(seg.get("transcript", ""))
+            praise_emotions_raw.append(emotion_str)
             praise_emotion_scores.append(
-                calculate_praise_emotion_score(seg.get("emotion", "neutral 0%"))
+                calculate_praise_emotion_score(emotion_str)
             )
+        elif label == "PSuggest":
+            psuggest_transcripts.append(seg.get("transcript", ""))
+            suggest_emotions_raw.append(emotion_str)
+        elif label == "NSuggest":
+            nsuggest_transcripts.append(seg.get("transcript", ""))
+            suggest_emotions_raw.append(emotion_str)
 
     # ══════════════════════════════════════════════════════════════════
     # 1. TEMPLATE SCORING (out of 10)
@@ -129,11 +142,13 @@ def generate_score_and_evidence(job_output_folder: str):
     template_score_val = round((len(completed) / 6.0) * 10.0, 2)
 
     # ══════════════════════════════════════════════════════════════════
-    # 2. RAG SCORING — single LLM call for both WarmUp + Praise
+    # 2. RAG SCORING — single LLM call for WarmUp + Praise + Suggest
     # ══════════════════════════════════════════════════════════════════
+    all_suggest_transcripts = psuggest_transcripts + nsuggest_transcripts
     rag_input = {
         "warmup": " ".join(warmup_transcripts),
         "praise": " ".join(praise_transcripts),
+        "suggest": " ".join(all_suggest_transcripts),
     }
     rag_results = evaluate_categories_with_rag(rag_input)
 
@@ -142,6 +157,11 @@ def generate_score_and_evidence(job_output_folder: str):
 
     praise_rag_score = round(rag_results["praise"].get("similarity_score_out_of_10", 0.0), 2)
     praise_rag_suggestions = rag_results["praise"].get("suggestions", "No suggestions.")
+
+    # Suggest RAG is scored out of 10 from LLM, then scaled to 20
+    suggest_rag_raw = round(rag_results["suggest"].get("similarity_score_out_of_10", 0.0), 2)
+    suggest_rag_score = round(suggest_rag_raw * 2.0, 2)  # scale to /20
+    suggest_rag_suggestions = rag_results["suggest"].get("suggestions", "No suggestions.")
 
     # ══════════════════════════════════════════════════════════════════
     # 3. WARMUP EMOTION SCORING (out of 5)
@@ -159,10 +179,53 @@ def generate_score_and_evidence(job_output_folder: str):
     if praise_emotion_scores:
         praise_emotion_score = round(sum(praise_emotion_scores) / len(praise_emotion_scores), 2)
 
+    # Check for sad/angry tones in praise segments
+    praise_bad_tones = []
+    for emo_str in praise_emotions_raw:
+        lbl, _ = _parse_emotion(emo_str)
+        if lbl in ("sad", "angry"):
+            praise_bad_tones.append(lbl)
+
     total_praise_score = round(praise_rag_score + praise_emotion_score, 2)
 
     # ══════════════════════════════════════════════════════════════════
-    # 5. BUILD score.json
+    # 5. SUGGEST SCORING (out of 20)
+    # ══════════════════════════════════════════════════════════════════
+    total_suggest_count = len(psuggest_transcripts) + len(nsuggest_transcripts)
+    suggest_balance_penalty = 0
+    balance_evidence_parts = []
+
+    if total_suggest_count > 0:
+        psuggest_pct = len(psuggest_transcripts) / total_suggest_count * 100
+        nsuggest_pct = len(nsuggest_transcripts) / total_suggest_count * 100
+
+        if psuggest_pct < 30:
+            suggest_balance_penalty += 5
+            balance_evidence_parts.append(
+                f"Too much NSuggest (negative suggestions) — PSuggest is only {psuggest_pct:.0f}%."
+            )
+        if nsuggest_pct < 30:
+            suggest_balance_penalty += 5
+            balance_evidence_parts.append(
+                f"Too much PSuggest (positive suggestions) — NSuggest is only {nsuggest_pct:.0f}%."
+            )
+
+    # Check for angry tone in suggest segments
+    suggest_angry_penalty = 0
+    suggest_angry_found = False
+    for emo_str in suggest_emotions_raw:
+        lbl, _ = _parse_emotion(emo_str)
+        if lbl == "angry":
+            suggest_angry_found = True
+            break
+
+    if suggest_angry_found:
+        suggest_angry_penalty = 10
+
+    suggest_total_score = max(0.0, round(suggest_rag_score - suggest_balance_penalty - suggest_angry_penalty, 2))
+
+    # ══════════════════════════════════════════════════════════════════
+    # 6. BUILD score.json
     # ══════════════════════════════════════════════════════════════════
     score_data = {
         "template_score": template_score_val,
@@ -172,10 +235,14 @@ def generate_score_and_evidence(job_output_folder: str):
         "praise_rag_score": praise_rag_score,
         "praise_emotion_score": praise_emotion_score,
         "praise_total_score": total_praise_score,
+        "suggest_rag_score": suggest_rag_score,
+        "suggest_balance_penalty": suggest_balance_penalty,
+        "suggest_angry_penalty": suggest_angry_penalty,
+        "suggest_total_score": suggest_total_score,
     }
 
     # ══════════════════════════════════════════════════════════════════
-    # 6. BUILD evidence.json
+    # 7. BUILD evidence.json
     # ══════════════════════════════════════════════════════════════════
     evidence_data = []
 
@@ -221,14 +288,49 @@ def generate_score_and_evidence(job_output_folder: str):
     else:
         praise_tone_text = "Tone should be improved for a happy friendly tone."
 
+    # Flag sad/angry tones in praise
+    if praise_bad_tones:
+        unique_bad = sorted(set(praise_bad_tones))
+        praise_tone_text += (
+            f" It is encouraged to use a friendly tone; "
+            f"{', '.join(unique_bad)} tone(s) are not recommended for praise."
+        )
+
     evidence_data.append({
         "category": "praise",
         "score": total_praise_score,
         "evidence": f"{praise_rag_text} {praise_tone_text}".strip()
     })
 
+    # — Suggest Evidence —
+    suggest_rag_pct = int(suggest_rag_raw * 10)
+    if suggest_rag_score >= 14:   # 70% of 20
+        suggest_rag_text = f"Suggest recommendations followed ({suggest_rag_pct}%)."
+    else:
+        suggest_rag_text = (
+            f"Suggest recommendation follow percentage {suggest_rag_pct}%, "
+            f"needs to improve. Suggestions: {suggest_rag_suggestions}"
+        )
+
+    suggest_evidence_parts = [suggest_rag_text]
+
+    if balance_evidence_parts:
+        suggest_evidence_parts.extend(balance_evidence_parts)
+
+    if suggest_angry_found:
+        suggest_evidence_parts.append(
+            "Angry tone detected. It is always encouraged to use a friendly tone; "
+            "angry tone is not recommended."
+        )
+
+    evidence_data.append({
+        "category": "suggest",
+        "score": suggest_total_score,
+        "evidence": " ".join(suggest_evidence_parts).strip()
+    })
+
     # ══════════════════════════════════════════════════════════════════
-    # 7. WRITE FILES
+    # 8. WRITE FILES
     # ══════════════════════════════════════════════════════════════════
     score_path = os.path.join(job_output_folder, "score.json")
     evidence_path = os.path.join(job_output_folder, "evidence.json")
