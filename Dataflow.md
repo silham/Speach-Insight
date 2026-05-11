@@ -91,8 +91,8 @@
          │
          ▼
   ┌─────────────────────────────────────────────────────────┐
-  │  Template & WarmUp Scoring   (pipeline/scoring.py)      │  generates score.json
-  │  Evaluates template sequence, RAG similarity & tone     │  and evidence.json
+  │  Multi-Category Scoring         (pipeline/scoring.py)  │  generates score.json
+  │  Template / WarmUp / Praise / Suggest / Listen         │  and evidence.json
   └─────────────────────────────────────────────────────────┘
          │
          ▼
@@ -352,7 +352,7 @@ suggested features for a trained classifier.
 
 ---
 
-### Stage 7 — Template, WarmUp & Praise Scoring
+### Stage 7 — Multi-Category Scoring
 
 **File:** `pipeline/scoring.py`  
 **RAG helper:** `rag.py` → `evaluate_categories_with_rag()`
@@ -370,12 +370,15 @@ generate_score_and_evidence(job_output_folder)
 Evaluates the `transcript.json` to calculate the following metrics:
 
 1. **Template Sequencing (10 points):** Validates the occurrence and chronological order of template categories (`WarmUp`, `Praise`, `PSuggest`, `NSuggest`, `Listen`, `Direct`).
-2. **WarmUp Content Quality (10 points):** Concatenates all `WarmUp` transcripts and queries the ChromaDB vector database using the Gemini LLM. The LLM compares the user's spoken warmup to the company guidelines and returns a similarity score alongside actionable suggestions.
-3. **WarmUp Emotion Tone (5 points):** Extracts the emotion confidence scores (Happy, Neutral, Sad, Angry) from the transcript. Evaluates the tone quality mathematically and averages it across all warmup segments.
-4. **Praise Content Quality (10 points):** Same approach as WarmUp — filters all `Praise` segments and evaluates them against the RAG knowledge base.
-5. **Praise Emotion Tone (10 points):** Applies Praise-specific emotion rules (Happy: 70% base + 30% confidence, Neutral: 40% base + 30% confidence, others: 0).
+2. **WarmUp Content Quality (10 points):** Concatenates all `WarmUp` transcripts and queries the ChromaDB vector database using the Gemini LLM.
+3. **WarmUp Emotion Tone (5 points):** Evaluates tone mathematically (Happy: 80%+20%conf, Neutral: 50%+30%conf, Sad: 30%+20%conf, others: 0).
+4. **Praise Content Quality (10 points):** Same RAG approach as WarmUp for `Praise` segments.
+5. **Praise Emotion Tone (10 points):** Happy: 70%+30%conf, Neutral: 40%+30%conf, others: 0. Flags sad/angry tones in evidence.
+6. **Suggest RAG Similarity (20 points):** Evaluates combined PSuggest + NSuggest. Applies balance penalty (−5) if either PSuggest or NSuggest < 30%, and angry tone penalty (−10).
+7. **Listen Coverage (7 points):** Full marks if Listen segments ≥ 10% of total segments, proportionally reduced otherwise.
+8. **Listen RAG Similarity (8 points):** Evaluates Listen transcript quality against the knowledge base.
 
-> **Optimisation:** WarmUp and Praise RAG scores are evaluated in a **single LLM call** via `evaluate_categories_with_rag()` to minimise API usage and stay within free-tier quotas.
+> **Optimisation:** All RAG scores (WarmUp, Praise, Suggest, Listen) are evaluated in a **single LLM call** via `evaluate_categories_with_rag()` to minimise API usage and stay within free-tier quotas.
 
 The resulting evaluations and suggestions are formatted into `score.json` and `evidence.json`.
 

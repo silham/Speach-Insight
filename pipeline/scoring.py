@@ -62,8 +62,8 @@ def generate_score_and_evidence(job_output_folder: str):
     """
     Reads transcript.json from the job_output_folder, calculates template scores,
     warmup metrics (RAG + Emotion), praise metrics (RAG + Emotion),
-    and suggest metrics (RAG + balance + tone penalty),
-    then writes score.json and evidence.json.
+    suggest metrics (RAG + balance + tone penalty), and listen metrics
+    (coverage + RAG), then writes score.json and evidence.json.
     """
     transcript_path = os.path.join(job_output_folder, "transcript.json")
     if not os.path.exists(transcript_path):
@@ -89,6 +89,7 @@ def generate_score_and_evidence(job_output_folder: str):
     psuggest_transcripts = []
     nsuggest_transcripts = []
     suggest_emotions_raw = []      # store raw emotion strings for Suggest
+    listen_transcripts = []
 
     for i, seg in enumerate(segments):
         label = seg.get("template_label")
@@ -114,6 +115,8 @@ def generate_score_and_evidence(job_output_folder: str):
         elif label == "NSuggest":
             nsuggest_transcripts.append(seg.get("transcript", ""))
             suggest_emotions_raw.append(emotion_str)
+        elif label == "Listen":
+            listen_transcripts.append(seg.get("transcript", ""))
 
     # ══════════════════════════════════════════════════════════════════
     # 1. TEMPLATE SCORING (out of 10)
@@ -142,13 +145,14 @@ def generate_score_and_evidence(job_output_folder: str):
     template_score_val = round((len(completed) / 6.0) * 10.0, 2)
 
     # ══════════════════════════════════════════════════════════════════
-    # 2. RAG SCORING — single LLM call for WarmUp + Praise + Suggest
+    # 2. RAG SCORING — single LLM call for all categories
     # ══════════════════════════════════════════════════════════════════
     all_suggest_transcripts = psuggest_transcripts + nsuggest_transcripts
     rag_input = {
         "warmup": " ".join(warmup_transcripts),
         "praise": " ".join(praise_transcripts),
         "suggest": " ".join(all_suggest_transcripts),
+        "listen": " ".join(listen_transcripts),
     }
     rag_results = evaluate_categories_with_rag(rag_input)
 
@@ -162,6 +166,11 @@ def generate_score_and_evidence(job_output_folder: str):
     suggest_rag_raw = round(rag_results["suggest"].get("similarity_score_out_of_10", 0.0), 2)
     suggest_rag_score = round(suggest_rag_raw * 2.0, 2)  # scale to /20
     suggest_rag_suggestions = rag_results["suggest"].get("suggestions", "No suggestions.")
+
+    # Listen RAG is scored out of 10 from LLM, then scaled to 8
+    listen_rag_raw = round(rag_results["listen"].get("similarity_score_out_of_10", 0.0), 2)
+    listen_rag_score = round(listen_rag_raw * 0.8, 2)  # scale to /8
+    listen_rag_suggestions = rag_results["listen"].get("suggestions", "No suggestions.")
 
     # ══════════════════════════════════════════════════════════════════
     # 3. WARMUP EMOTION SCORING (out of 5)
@@ -225,7 +234,22 @@ def generate_score_and_evidence(job_output_folder: str):
     suggest_total_score = max(0.0, round(suggest_rag_score - suggest_balance_penalty - suggest_angry_penalty, 2))
 
     # ══════════════════════════════════════════════════════════════════
-    # 6. BUILD score.json
+    # 6. LISTEN SCORING (out of 15: coverage /7 + RAG /8)
+    # ══════════════════════════════════════════════════════════════════
+    total_segments = len(segments)
+    listen_count = len(listen_transcripts)
+    listen_coverage_pct = (listen_count / total_segments * 100) if total_segments > 0 else 0
+
+    if listen_coverage_pct >= 10:
+        listen_coverage_score = 7.0
+    else:
+        # Proportionally reduce: (actual_pct / 10) * 7
+        listen_coverage_score = round((listen_coverage_pct / 10.0) * 7.0, 2)
+
+    listen_total_score = round(listen_coverage_score + listen_rag_score, 2)
+
+    # ══════════════════════════════════════════════════════════════════
+    # 7. BUILD score.json
     # ══════════════════════════════════════════════════════════════════
     score_data = {
         "template_score": template_score_val,
@@ -239,10 +263,13 @@ def generate_score_and_evidence(job_output_folder: str):
         "suggest_balance_penalty": suggest_balance_penalty,
         "suggest_angry_penalty": suggest_angry_penalty,
         "suggest_total_score": suggest_total_score,
+        "listen_rag_score": listen_rag_score,
+        "listen_coverage_score": listen_coverage_score,
+        "listen_total_score": listen_total_score,
     }
 
     # ══════════════════════════════════════════════════════════════════
-    # 7. BUILD evidence.json
+    # 8. BUILD evidence.json
     # ══════════════════════════════════════════════════════════════════
     evidence_data = []
 
@@ -329,8 +356,36 @@ def generate_score_and_evidence(job_output_folder: str):
         "evidence": " ".join(suggest_evidence_parts).strip()
     })
 
+    # — Listen Evidence —
+    listen_rag_pct = int(listen_rag_raw * 10)
+    listen_evidence_parts = []
+
+    if listen_rag_score >= 5.6:   # 70% of 8
+        listen_evidence_parts.append(f"Listen recommendations followed ({listen_rag_pct}%).")
+    else:
+        listen_evidence_parts.append(
+            f"Listen recommendation follow percentage {listen_rag_pct}%, "
+            f"needs to improve. Suggestions: {listen_rag_suggestions}"
+        )
+
+    if listen_coverage_pct >= 10:
+        listen_evidence_parts.append(
+            f"Listening coverage is {listen_coverage_pct:.0f}% of total segments (meets 10% threshold)."
+        )
+    else:
+        listen_evidence_parts.append(
+            f"Listening coverage is only {listen_coverage_pct:.0f}% of total segments (below 10% threshold). "
+            "It is always encouraged to ask feedback from the junior and listen to him/her actively."
+        )
+
+    evidence_data.append({
+        "category": "listen",
+        "score": listen_total_score,
+        "evidence": " ".join(listen_evidence_parts).strip()
+    })
+
     # ══════════════════════════════════════════════════════════════════
-    # 8. WRITE FILES
+    # 9. WRITE FILES
     # ══════════════════════════════════════════════════════════════════
     score_path = os.path.join(job_output_folder, "score.json")
     evidence_path = os.path.join(job_output_folder, "evidence.json")
