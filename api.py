@@ -6,8 +6,9 @@ import shutil
 import os
 from media_utils import convert_video_to_audio
 import uuid
+import json
 
-from rag import add_document_to_db, ask_rag
+from rag import add_document_to_db
 from dotenv import load_dotenv
 
 from model import load_transcriber
@@ -36,7 +37,7 @@ app.add_middleware(
 app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 
 # --- Load AI Models (once at startup) ---
-print("⏳ Initializing AI Models...")
+print("Initializing AI Models...")
 transcriber = load_transcriber()
 emotion_analyzer = EmotionAnalyzer()
 template_clf = load_template_classifier()
@@ -51,7 +52,7 @@ pipeline = AnalysisPipeline(
     template_classifier=template_clf,
     lead_speaker=lead_speaker,
 )
-print("✅ Pipeline ready.")
+print("Pipeline ready.")
 
 
 @app.get("/")
@@ -69,7 +70,7 @@ async def analyze_audio(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    print(f"📂 Processing: {filename}")
+    print(f"Processing: {filename}")
 
     # ── 2. Convert video → audio if needed ────────────────────────────
     audio_path = convert_video_to_audio(file_path)
@@ -98,10 +99,22 @@ async def analyze_audio(file: UploadFile = File(...)):
     }
 
 
-# ── RAG ENDPOINTS ──────────────────────────────────────────
+# ── REPORT ENDPOINT ──────────────────────────────────────────
 
-class RAGQuery(BaseModel):
-    query: str
+@app.get("/report/{job_id}")
+async def get_report(job_id: str):
+    """Return the generated report for a processed job."""
+    report_path = os.path.join(PROCESSED_DIR, job_id, "report.json")
+    if not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="Report not found for this job.")
+
+    with open(report_path, "r", encoding="utf-8") as f:
+        report_data = json.load(f)
+
+    return report_data
+
+
+# ── RAG UPLOAD ENDPOINT ──────────────────────────────────────
 
 @app.post("/rag/upload")
 async def rag_upload(file: UploadFile = File(...)):
@@ -118,11 +131,3 @@ async def rag_upload(file: UploadFile = File(...)):
         return {"status": "success", "chunks_added": chunks_added, "filename": file.filename}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/rag/ask")
-async def rag_ask(query: RAGQuery):
-    try:
-        response = ask_rag(query.query)
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))

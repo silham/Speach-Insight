@@ -54,60 +54,13 @@ def _format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-def ask_rag(query: str):
-    """Query the vector database and generate an answer using Gemini (free tier)."""
-
-    # We expect GOOGLE_API_KEY to be set in the environment or .env
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        raise ValueError("GOOGLE_API_KEY is not set in environment variables.")
-
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0.3,
-        max_retries=2,
-    )
-
-    vectorstore = get_vectorstore()
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-
-    # Modern LCEL-based RAG chain (replaces deprecated RetrievalQA)
-    prompt = ChatPromptTemplate.from_template(
-        """You are a helpful assistant. Answer the question based ONLY on the following context.
-If the context does not contain enough information, say "I don't have enough information to answer that."
-
-Context:
-{context}
-
-Question: {question}
-
-Answer:"""
-    )
-
-    # Build the chain using LCEL
-    rag_chain = (
-        {"context": retriever | _format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    # Also retrieve raw docs for source display
-    retrieved_docs = retriever.invoke(query)
-    answer = rag_chain.invoke(query)
-
-    return {
-        "answer": answer,
-        "context": [doc.page_content for doc in retrieved_docs]
-    }
-
 def evaluate_categories_with_rag(category_texts: dict):
     """
     Evaluate multiple category texts against the RAG DB in a SINGLE LLM call.
 
     Args:
         category_texts: dict mapping category name to combined transcript text,
-                        e.g. {"warmup": "hello everyone...", "praise": "great work..."}
+                        e.g. {"warmup": "hello...", "praise": "great...", "direct": "you need to..."}
 
     Returns:
         dict mapping category name to {"similarity_score_out_of_10": float, "suggestions": str}
@@ -145,6 +98,7 @@ def evaluate_categories_with_rag(category_texts: dict):
     prompt = ChatPromptTemplate.from_template(
         """You are an evaluator. Compare the user's spoken text for each category against the knowledge base context.
 For EACH category, calculate a similarity score out of 10 based on how well the user followed the recommended guidelines.
+For the "direct" category, also evaluate whether the directions given are clear and practical.
 Also provide brief suggestions on how the user can improve for each category.
 
 Knowledge Base Context:
@@ -156,7 +110,8 @@ User's Spoken Text (by category):
 Return ONLY a valid JSON object (no markdown) with one key per category. Example:
 {{
   "warmup": {{"similarity_score_out_of_10": 8.5, "suggestions": "Your suggestion."}},
-  "praise": {{"similarity_score_out_of_10": 7.0, "suggestions": "Your suggestion."}}
+  "praise": {{"similarity_score_out_of_10": 7.0, "suggestions": "Your suggestion."}},
+  "direct": {{"similarity_score_out_of_10": 6.0, "suggestions": "Your suggestion."}}
 }}"""
     )
 
@@ -196,3 +151,123 @@ Return ONLY a valid JSON object (no markdown) with one key per category. Example
             fallback[cat]["suggestions"] = suggestion
         return fallback
 
+
+def generate_report(evidence_data: list, score_data: dict):
+    """
+    Generate a detailed report from evidence.json data in a SINGLE LLM call.
+
+    Args:
+        evidence_data: list of evidence dicts (from evidence.json)
+        score_data: dict of all scores (from score.json)
+
+    Returns:
+        dict with the full report structure, or a fallback on error.
+    """
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        print("[WARNING] GOOGLE_API_KEY not set, returning fallback report.")
+        return _fallback_report(evidence_data, score_data)
+
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.3,
+        max_retries=2,
+    )
+
+    evidence_str = json.dumps(evidence_data, indent=2)
+    score_str = json.dumps(score_data, indent=2)
+
+    prompt = ChatPromptTemplate.from_template(
+        """You are a professional meeting coach. Based on the scoring evidence below, generate a detailed performance report.
+
+Scores:
+{scores}
+
+Evidence:
+{evidence}
+
+Return ONLY a valid JSON object (no markdown) with this exact structure:
+{{
+  "total_score": <number out of 100>,
+  "categories": [
+    {{
+      "name": "template",
+      "score": <number>,
+      "max_score": 10,
+      "description": "Brief description of performance in this category."
+    }},
+    {{
+      "name": "warmup",
+      "score": <number>,
+      "max_score": 15,
+      "description": "Brief description..."
+    }},
+    {{
+      "name": "praise",
+      "score": <number>,
+      "max_score": 20,
+      "description": "Brief description..."
+    }},
+    {{
+      "name": "suggest",
+      "score": <number>,
+      "max_score": 20,
+      "description": "Brief description..."
+    }},
+    {{
+      "name": "listen",
+      "score": <number>,
+      "max_score": 15,
+      "description": "Brief description..."
+    }},
+    {{
+      "name": "direct",
+      "score": <number>,
+      "max_score": 20,
+      "description": "Brief description..."
+    }}
+  ],
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1 with specific suggestion", "improvement 2 with specific suggestion"]
+}}"""
+    )
+
+    try:
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({"scores": score_str, "evidence": evidence_str})
+
+        response = response.strip()
+        if response.startswith("```json"):
+            response = response[7:-3].strip()
+        elif response.startswith("```"):
+            response = response[3:-3].strip()
+
+        return json.loads(response)
+    except Exception as e:
+        print(f"[WARNING] Report generation failed: {e}")
+        return _fallback_report(evidence_data, score_data)
+
+
+def _fallback_report(evidence_data: list, score_data: dict):
+    """Build a basic report without LLM when the API is unavailable."""
+    total = score_data.get("total_score", 0)
+    categories = []
+    cat_max = {
+        "template": 10, "warmup": 15, "praise": 20,
+        "suggest": 20, "listen": 15, "direct": 20
+    }
+    for ev in evidence_data:
+        cat = ev.get("category", "unknown")
+        categories.append({
+            "name": cat,
+            "score": ev.get("score", 0),
+            "max_score": cat_max.get(cat, 0),
+            "description": ev.get("evidence", "")
+        })
+
+    return {
+        "total_score": total,
+        "categories": categories,
+        "strengths": ["Report generation unavailable — review evidence.json for details."],
+        "improvements": ["Report generation unavailable — review evidence.json for details."]
+    }

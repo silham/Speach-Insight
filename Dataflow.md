@@ -91,8 +91,8 @@
          │
          ▼
   ┌─────────────────────────────────────────────────────────┐
-  │  Multi-Category Scoring         (pipeline/scoring.py)  │  generates score.json
-  │  Template / WarmUp / Praise / Suggest / Listen         │  and evidence.json
+  │  Multi-Category Scoring         (pipeline/scoring.py)  │  generates score.json,
+  │  Template/WarmUp/Praise/Suggest/Listen/Direct           │  evidence.json, report.json
   └─────────────────────────────────────────────────────────┘
          │
          ▼
@@ -114,14 +114,13 @@ The application also includes a completely separate Retrieval-Augmented Generati
 
 ```
   ┌───────────────────────────────────────────────────────┐
-  │         Knowledge Base (RAG) — Independent Flow       │
-  │                     (rag.py)                          │
+  │         Knowledge Base (RAG) — rag.py                 │
   └───────────────────────────────────────────────────────┘
 
-   Document Upload (PDF/TXT)      Query Request
+   Document Upload (PDF/TXT)      Scoring Evaluation
           │                              │
           ▼                              ▼
-    add_document_to_db()              ask_rag()
+    add_document_to_db()    evaluate_categories_with_rag()
           │                              │
     (TextSplitter)                       │
           │                              │
@@ -129,10 +128,10 @@ The application also includes a completely separate Retrieval-Augmented Generati
     VectorStore (ChromaDB) ◄─────────────┘
           │
           ▼
-    LLM (Gemini 2.0 Flash)
-          │
-          ▼
-    Answer + Context
+    LLM (Gemini 2.5 Flash)        generate_report()
+          │                              │
+          ▼                              ▼
+    RAG Scores + Suggestions      report.json
 ```
 
 ---
@@ -352,10 +351,10 @@ suggested features for a trained classifier.
 
 ---
 
-### Stage 7 — Multi-Category Scoring
+### Stage 7 — Multi-Category Scoring & Report Generation
 
 **File:** `pipeline/scoring.py`  
-**RAG helper:** `rag.py` → `evaluate_categories_with_rag()`
+**RAG helper:** `rag.py` → `evaluate_categories_with_rag()`, `generate_report()`
 
 ```
 JobResult (transcript.json saved)
@@ -363,24 +362,36 @@ JobResult (transcript.json saved)
         ▼
 generate_score_and_evidence(job_output_folder)
         │
-        └── writes processed/{job_id}/score.json
-                   processed/{job_id}/evidence.json
+        ├── LLM Call 1: evaluate_categories_with_rag()
+        │   └── Evaluates WarmUp, Praise, Suggest, Listen, Direct
+        │
+        ├── writes processed/{job_id}/score.json
+        ├── writes processed/{job_id}/evidence.json
+        │
+        ├── LLM Call 2: generate_report()
+        │   └── Generates detailed performance report from evidence
+        │
+        └── writes processed/{job_id}/report.json
 ```
 
 Evaluates the `transcript.json` to calculate the following metrics:
 
-1. **Template Sequencing (10 points):** Validates the occurrence and chronological order of template categories (`WarmUp`, `Praise`, `PSuggest`, `NSuggest`, `Listen`, `Direct`).
+1. **Template Sequencing (10 points):** Validates the occurrence and chronological order of template categories. WarmUp must be at the beginning of the conversation, followed by Praise segments.
 2. **WarmUp Content Quality (10 points):** Concatenates all `WarmUp` transcripts and queries the ChromaDB vector database using the Gemini LLM.
 3. **WarmUp Emotion Tone (5 points):** Evaluates tone mathematically (Happy: 80%+20%conf, Neutral: 50%+30%conf, Sad: 30%+20%conf, others: 0).
 4. **Praise Content Quality (10 points):** Same RAG approach as WarmUp for `Praise` segments.
 5. **Praise Emotion Tone (10 points):** Happy: 70%+30%conf, Neutral: 40%+30%conf, others: 0. Flags sad/angry tones in evidence.
 6. **Suggest RAG Similarity (20 points):** Evaluates combined PSuggest + NSuggest. Applies balance penalty (−5) if either PSuggest or NSuggest < 30%, and angry tone penalty (−10).
-7. **Listen Coverage (7 points):** Full marks if Listen segments ≥ 10% of total segments, proportionally reduced otherwise.
+7. **Listen Coverage (7 points):** Full marks if Listen segments >= 10% of total segments, proportionally reduced otherwise.
 8. **Listen RAG Similarity (8 points):** Evaluates Listen transcript quality against the knowledge base.
+9. **Direct Clarity & Practicality (20 points):** LLM evaluates whether the directions given are clear and practical.
+10. **Total Score (100 points):** Sum of all category scores.
 
-> **Optimisation:** All RAG scores (WarmUp, Praise, Suggest, Listen) are evaluated in a **single LLM call** via `evaluate_categories_with_rag()` to minimise API usage and stay within free-tier quotas.
+> **Optimisation:** Only **2 LLM calls** are made per pipeline run:
+> 1. `evaluate_categories_with_rag()` — scores all 5 content categories in a single call
+> 2. `generate_report()` — generates the full performance report from evidence data
 
-The resulting evaluations and suggestions are formatted into `score.json` and `evidence.json`.
+The resulting evaluations are formatted into `score.json`, `evidence.json`, and `report.json`.
 
 ---
 

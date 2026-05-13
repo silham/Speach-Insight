@@ -43,7 +43,7 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
 | scikit-learn | Metrics (training phase) |
 | FFmpeg | Video → audio conversion |
 | LangChain + ChromaDB | Vector search / RAG knowledge base |
-| Google Gemini API | RAG LLM engine (`gemini-2.0-flash`) |
+| Google Gemini API | RAG LLM engine (`gemini-2.5-flash`) |
 
 ### Frontend
 | Library | Role |

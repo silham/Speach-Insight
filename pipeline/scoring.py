@@ -4,10 +4,10 @@ import sys
 
 # Ensure we can import from rag.py if executed context requires it
 try:
-    from rag import evaluate_categories_with_rag
+    from rag import evaluate_categories_with_rag, generate_report
 except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from rag import evaluate_categories_with_rag
+    from rag import evaluate_categories_with_rag, generate_report
 
 
 def _parse_emotion(emotion_str):
@@ -62,8 +62,9 @@ def generate_score_and_evidence(job_output_folder: str):
     """
     Reads transcript.json from the job_output_folder, calculates template scores,
     warmup metrics (RAG + Emotion), praise metrics (RAG + Emotion),
-    suggest metrics (RAG + balance + tone penalty), and listen metrics
-    (coverage + RAG), then writes score.json and evidence.json.
+    suggest metrics (RAG + balance + tone penalty), listen metrics
+    (coverage + RAG), direct metrics (RAG /20), total score /100,
+    then writes score.json, evidence.json, and report.json.
     """
     transcript_path = os.path.join(job_output_folder, "transcript.json")
     if not os.path.exists(transcript_path):
@@ -84,12 +85,13 @@ def generate_score_and_evidence(job_output_folder: str):
     warmup_transcripts = []
     warmup_emotion_scores = []
     praise_transcripts = []
-    praise_emotions_raw = []       # store raw emotion strings for Praise
+    praise_emotions_raw = []
     praise_emotion_scores = []
     psuggest_transcripts = []
     nsuggest_transcripts = []
-    suggest_emotions_raw = []      # store raw emotion strings for Suggest
+    suggest_emotions_raw = []
     listen_transcripts = []
+    direct_transcripts = []
 
     for i, seg in enumerate(segments):
         label = seg.get("template_label")
@@ -117,24 +119,44 @@ def generate_score_and_evidence(job_output_folder: str):
             suggest_emotions_raw.append(emotion_str)
         elif label == "Listen":
             listen_transcripts.append(seg.get("transcript", ""))
+        elif label == "Direct":
+            direct_transcripts.append(seg.get("transcript", ""))
 
     # ══════════════════════════════════════════════════════════════════
     # 1. TEMPLATE SCORING (out of 10)
+    #    WarmUp must be at the beginning, Praise must follow WarmUp
     # ══════════════════════════════════════════════════════════════════
     completed = []
     missed = []
 
     first_warmup_idx = float('inf')
+    warmup_at_beginning = False
+
     if category_indices["WarmUp"]:
-        completed.append("WarmUp")
         first_warmup_idx = min(category_indices["WarmUp"])
+        # Check if WarmUp is at the beginning: no non-WarmUp segments before first WarmUp
+        non_warmup_before = [
+            i for i in range(first_warmup_idx)
+            if segments[i].get("template_label") in category_indices
+            and segments[i].get("template_label") != "WarmUp"
+        ]
+        if len(non_warmup_before) == 0:
+            warmup_at_beginning = True
+            completed.append("WarmUp")
+        else:
+            # WarmUp exists but not at the beginning — partial credit
+            missed.append("WarmUp (not at beginning)")
     else:
         missed.append("WarmUp")
 
+    # Praise must come after WarmUp
     if category_indices["Praise"] and any(idx > first_warmup_idx for idx in category_indices["Praise"]):
         completed.append("Praise")
     else:
-        missed.append("Praise")
+        if category_indices["Praise"]:
+            missed.append("Praise (not after WarmUp)")
+        else:
+            missed.append("Praise")
 
     for cat in ["PSuggest", "NSuggest", "Listen", "Direct"]:
         if category_indices[cat]:
@@ -145,7 +167,7 @@ def generate_score_and_evidence(job_output_folder: str):
     template_score_val = round((len(completed) / 6.0) * 10.0, 2)
 
     # ══════════════════════════════════════════════════════════════════
-    # 2. RAG SCORING — single LLM call for all categories
+    # 2. RAG SCORING — single LLM call for all categories (incl. Direct)
     # ══════════════════════════════════════════════════════════════════
     all_suggest_transcripts = psuggest_transcripts + nsuggest_transcripts
     rag_input = {
@@ -153,6 +175,7 @@ def generate_score_and_evidence(job_output_folder: str):
         "praise": " ".join(praise_transcripts),
         "suggest": " ".join(all_suggest_transcripts),
         "listen": " ".join(listen_transcripts),
+        "direct": " ".join(direct_transcripts),
     }
     rag_results = evaluate_categories_with_rag(rag_input)
 
@@ -164,13 +187,18 @@ def generate_score_and_evidence(job_output_folder: str):
 
     # Suggest RAG is scored out of 10 from LLM, then scaled to 20
     suggest_rag_raw = round(rag_results["suggest"].get("similarity_score_out_of_10", 0.0), 2)
-    suggest_rag_score = round(suggest_rag_raw * 2.0, 2)  # scale to /20
+    suggest_rag_score = round(suggest_rag_raw * 2.0, 2)
     suggest_rag_suggestions = rag_results["suggest"].get("suggestions", "No suggestions.")
 
     # Listen RAG is scored out of 10 from LLM, then scaled to 8
     listen_rag_raw = round(rag_results["listen"].get("similarity_score_out_of_10", 0.0), 2)
-    listen_rag_score = round(listen_rag_raw * 0.8, 2)  # scale to /8
+    listen_rag_score = round(listen_rag_raw * 0.8, 2)
     listen_rag_suggestions = rag_results["listen"].get("suggestions", "No suggestions.")
+
+    # Direct RAG is scored out of 10 from LLM, then scaled to 20
+    direct_rag_raw = round(rag_results["direct"].get("similarity_score_out_of_10", 0.0), 2)
+    direct_score = round(direct_rag_raw * 2.0, 2)
+    direct_suggestions = rag_results["direct"].get("suggestions", "No suggestions.")
 
     # ══════════════════════════════════════════════════════════════════
     # 3. WARMUP EMOTION SCORING (out of 5)
@@ -211,12 +239,12 @@ def generate_score_and_evidence(job_output_folder: str):
         if psuggest_pct < 30:
             suggest_balance_penalty += 5
             balance_evidence_parts.append(
-                f"Too much NSuggest (negative suggestions) — PSuggest is only {psuggest_pct:.0f}%."
+                f"Too much NSuggest (negative suggestions) -- PSuggest is only {psuggest_pct:.0f}%."
             )
         if nsuggest_pct < 30:
             suggest_balance_penalty += 5
             balance_evidence_parts.append(
-                f"Too much PSuggest (positive suggestions) — NSuggest is only {nsuggest_pct:.0f}%."
+                f"Too much PSuggest (positive suggestions) -- NSuggest is only {nsuggest_pct:.0f}%."
             )
 
     # Check for angry tone in suggest segments
@@ -243,13 +271,23 @@ def generate_score_and_evidence(job_output_folder: str):
     if listen_coverage_pct >= 10:
         listen_coverage_score = 7.0
     else:
-        # Proportionally reduce: (actual_pct / 10) * 7
         listen_coverage_score = round((listen_coverage_pct / 10.0) * 7.0, 2)
 
     listen_total_score = round(listen_coverage_score + listen_rag_score, 2)
 
     # ══════════════════════════════════════════════════════════════════
-    # 7. BUILD score.json
+    # 7. TOTAL SCORE (out of 100)
+    #    Template(10) + WarmUp(15) + Praise(20) + Suggest(20)
+    #    + Listen(15) + Direct(20)
+    # ══════════════════════════════════════════════════════════════════
+    total_score = round(
+        template_score_val + total_warmup_score + total_praise_score
+        + suggest_total_score + listen_total_score + direct_score, 2
+    )
+    total_score = min(100.0, total_score)
+
+    # ══════════════════════════════════════════════════════════════════
+    # 8. BUILD score.json
     # ══════════════════════════════════════════════════════════════════
     score_data = {
         "template_score": template_score_val,
@@ -266,18 +304,26 @@ def generate_score_and_evidence(job_output_folder: str):
         "listen_rag_score": listen_rag_score,
         "listen_coverage_score": listen_coverage_score,
         "listen_total_score": listen_total_score,
+        "direct_score": direct_score,
+        "total_score": total_score,
     }
 
     # ══════════════════════════════════════════════════════════════════
-    # 8. BUILD evidence.json
+    # 9. BUILD evidence.json
     # ══════════════════════════════════════════════════════════════════
     evidence_data = []
 
     # — Template Evidence —
+    template_order_note = ""
+    if not warmup_at_beginning and category_indices["WarmUp"]:
+        template_order_note = " WarmUp was not at the beginning of the conversation."
     evidence_data.append({
         "category": "template",
         "score": template_score_val,
-        "evidence": f"completed categories - [{', '.join(completed)}], missed categories - [{', '.join(missed)}]"
+        "evidence": (
+            f"completed categories - [{', '.join(completed)}], "
+            f"missed categories - [{', '.join(missed)}].{template_order_note}"
+        )
     })
 
     # — WarmUp Evidence —
@@ -384,8 +430,25 @@ def generate_score_and_evidence(job_output_folder: str):
         "evidence": " ".join(listen_evidence_parts).strip()
     })
 
+    # — Direct Evidence —
+    direct_rag_pct = int(direct_rag_raw * 10)
+    if direct_score >= 14:   # 70% of 20
+        direct_rag_text = f"Direct recommendations followed ({direct_rag_pct}%). Directions are clear and practical."
+    else:
+        direct_rag_text = (
+            f"Direct recommendation follow percentage {direct_rag_pct}%, "
+            f"needs to improve. Directions should be clearer and more practical. "
+            f"Suggestions: {direct_suggestions}"
+        )
+
+    evidence_data.append({
+        "category": "direct",
+        "score": direct_score,
+        "evidence": direct_rag_text
+    })
+
     # ══════════════════════════════════════════════════════════════════
-    # 9. WRITE FILES
+    # 10. WRITE score.json and evidence.json
     # ══════════════════════════════════════════════════════════════════
     score_path = os.path.join(job_output_folder, "score.json")
     evidence_path = os.path.join(job_output_folder, "evidence.json")
@@ -397,3 +460,15 @@ def generate_score_and_evidence(job_output_folder: str):
         json.dump(evidence_data, f, indent=4)
 
     print(f"[INFO] Score and Evidence saved to {job_output_folder}")
+
+    # ══════════════════════════════════════════════════════════════════
+    # 11. GENERATE report.json (2nd and final LLM call)
+    # ══════════════════════════════════════════════════════════════════
+    try:
+        report_data = generate_report(evidence_data, score_data)
+        report_path = os.path.join(job_output_folder, "report.json")
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=4)
+        print(f"[INFO] Report saved to {report_path}")
+    except Exception as exc:
+        print(f"[WARNING] Failed to generate report: {exc}")
