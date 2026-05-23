@@ -23,7 +23,7 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
   - **Suggest** (20 pts) — RAG similarity (20), balance penalty (-5 if PSuggest or NSuggest < 30%), angry tone penalty (-10)
   - **Listen** (15 pts) — RAG similarity (8) + coverage threshold (7, requires ≥ 10% of segments)
 - Lead speaker identification (stub ships; see `pipeline/lead_speaker/`)
-- **Knowledge Base (RAG)** — Upload documents (PDF/TXT) and chat with them using Gemini and ChromaDB
+- **Knowledge Base (RAG)** — Upload documents (PDF/DOCX/TXT) and evaluate speaking guidelines using Gemini and ChromaDB. Sentences are classified using the local template classifier model to build 5 separate category-specific RAG databases (`warmup`, `praise`, `suggest`, `listen`, `direct`).
 - React dashboard with colour-coded emotion badges, audio playback, and a dedicated RAG chat interface
 
 ---
@@ -192,7 +192,8 @@ Upload an audio or video file for full analysis.
 Segment audio clips are served statically at `/audio/{job_id}/{filename}`.
 
 ### `POST /rag/upload`
-Upload a document (PDF/TXT) to index into the ChromaDB vector store.
+
+Upload a document (PDF/DOCX/TXT) to index into the ChromaDB vector stores. Individual sentences in the document are automatically classified using the local `Template_classifier_model` and routed to 5 separate RAG databases (`warmup`, `praise`, `suggest`, `listen`, `direct`).
 
 **Request:** `multipart/form-data`, field `file`.
 
@@ -201,7 +202,7 @@ Upload a document (PDF/TXT) to index into the ChromaDB vector store.
 {
   "status": "success",
   "chunks_added": 15,
-  "filename": "document.pdf"
+  "filename": "document.docx"
 }
 ```
 

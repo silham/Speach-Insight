@@ -315,11 +315,11 @@ function App() {
           <div className="card glass-panel rag-upload-panel">
             <h2>Knowledge Base Document Upload</h2>
             <p className="rag-description">
-              Upload PDF or TXT documents to build the knowledge base.
+              Upload PDF, DOCX, or TXT documents to build the knowledge base.
               These documents are used to evaluate meeting segments against your organization's guidelines.
             </p>
             <div className="upload-group">
-              <input type="file" onChange={handleRagFileChange} accept=".pdf,.txt" className="file-input" />
+              <input type="file" onChange={handleRagFileChange} accept=".pdf,.docx,.txt" className="file-input" />
               <button onClick={handleRagUpload} disabled={ragLoading || !ragFile} className="primary-btn">
                 {ragLoading ? "Uploading..." : "Index Document"}
               </button>

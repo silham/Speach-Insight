@@ -1,0 +1,30 @@
+{
+    "warmup": [
+        {
+            "sentence": "with some casual talk.",
+            "predicted_label": "WarmUp",
+            "confidence": 0.7011
+        }
+    ],
+    "praise": [],
+    "suggest": [
+        {
+            "sentence": "warm up should start with a greeting and positive tone.",
+            "predicted_label": "PSuggest",
+            "confidence": 0.8626
+        },
+        {
+            "sentence": "Directions should be clear",
+            "predicted_label": "PSuggest",
+            "confidence": 0.9518
+        }
+    ],
+    "listen": [],
+    "direct": [
+        {
+            "sentence": "praise the employee on what he or she has done good in a friendly tone.",
+            "predicted_label": "Direct",
+            "confidence": 0.9818
+        }
+    ]
+}

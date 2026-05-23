@@ -108,30 +108,33 @@
 
 ---
 
-## Knowledge Base (RAG) — Independent Flow
+## Knowledge Base (RAG) — Multi-Category Flow
 
-The application also includes a completely separate Retrieval-Augmented Generation (RAG) feature that allows users to upload documents and query them. This flow does not interact with the audio analysis pipeline.
+The application includes a Retrieval-Augmented Generation (RAG) feature that allows users to upload guidelines and documents to index. During ingestion, individual sentences are classified using the local template classifier model and routed into 5 separate databases. During media analysis, these databases are queried independently per segment to evaluate compliance with specific category guidelines.
 
 ```
-  ┌───────────────────────────────────────────────────────┐
-  │         Knowledge Base (RAG) — rag.py                 │
-  └───────────────────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────┐
+  │              Knowledge Base (RAG) — rag.py               │
+  └──────────────────────────────────────────────────────────┘
 
-   Document Upload (PDF/TXT)      Scoring Evaluation
-          │                              │
-          ▼                              ▼
-    add_document_to_db()    evaluate_categories_with_rag()
-          │                              │
-    (TextSplitter)                       │
-          │                              │
-          ▼                              │
-    VectorStore (ChromaDB) ◄─────────────┘
-          │
-          ▼
-    LLM (Gemini 2.5 Flash)        generate_report()
-          │                              │
-          ▼                              ▼
-    RAG Scores + Suggestions      report.json
+     Document Upload (PDF/DOCX/TXT)           Scoring Evaluation
+                 │                                   │
+                 ▼                                   ▼
+         [split into sentences]            evaluate_categories_with_rag()
+                 │                                   │
+                 ▼                                   ▼
+         [local template classifier]       [query specific DB per category]
+                 │                                   │
+         ┌───────┴───────┬──────────────┐            │
+         ▼               ▼              ▼            │
+     WarmUp DB       Praise DB      Suggest DB etc. ◄┘
+         │               │              │
+         └───────┬───────┴──────────────┘
+                 ▼
+       LLM (Gemini 2.5 Flash)              generate_report()
+                 │                                   │
+                 ▼                                   ▼
+       RAG Scores + Suggestions             report.json
 ```
 
 ---
