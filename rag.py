@@ -197,9 +197,9 @@ def evaluate_categories_with_rag(category_texts: dict):
     )
 
     prompt = ChatPromptTemplate.from_template(
-        """You are an evaluator. Compare the user's spoken text for each category against the category-specific reference guidelines from the knowledge base context.
+        """You are an expert speech evaluator.You have to provide a score for a speech based on the given details. Compare the user's spoken text for each category against the category-specific reference guidelines from the knowledge base context.
 For EACH category, calculate a similarity score out of 10 based on how well the user followed the recommended guidelines for that category.
-For the "direct" category, also evaluate whether the directions given are clear and practical.
+For the "direct" category, also evaluate whether the directions given are clear and practical. If context is missing generally do the evalutaion.
 Also provide brief suggestions on how the user can improve for each category.
 
 Knowledge Base Context (Category-Specific Guidelines):
@@ -278,7 +278,7 @@ def generate_report(evidence_data: list, score_data: dict):
     score_str = json.dumps(score_data, indent=2)
 
     prompt = ChatPromptTemplate.from_template(
-        """You are a professional meeting coach. Based on the scoring evidence below, generate a detailed performance report.
+        """You are a professional speech coach.The speakers are given a speech template to follow and the evaluation is done based on that. The details for the reporting is given below. Based on the scoring evidence below, generate a detailed performance report and also give reasons for the scores and detailed suggestions, the generated report should be the final outcome.
 
 Scores:
 {scores}
