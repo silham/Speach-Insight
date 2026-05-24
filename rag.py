@@ -15,26 +15,8 @@ from langchain_core.runnables import RunnablePassthrough
 # RAG DB Directory
 CHROMA_PATH = "chroma_db"
 
-# Category mapping from local classification label to database directory name
-CATEGORY_MAP = {
-    "WarmUp": "warmup",
-    "Praise": "praise",
-    "PSuggest": "suggest",
-    "NSuggest": "suggest",
-    "Listen": "listen",
-    "Direct": "direct"
-}
-
-_template_clf = None
-
-
-def _get_template_classifier():
-    """Lazily load the TemplateClassifier to save memory and avoid circular imports."""
-    global _template_clf
-    if _template_clf is None:
-        from template_classifier import TemplateClassifier
-        _template_clf = TemplateClassifier()
-    return _template_clf
+# Valid RAG database category names
+VALID_CATEGORIES = {"warmup", "praise", "suggest", "listen", "direct"}
 
 
 def get_embeddings():
@@ -62,10 +44,86 @@ def split_into_sentences(text: str) -> list[str]:
     return sentences
 
 
+def _classify_sentences_with_llm(sentences: list[str]) -> dict[str, list[str]]:
+    """
+    Classify a list of sentences into RAG categories using Gemini LLM.
+
+    Returns a dict mapping category name to list of sentences, e.g.:
+        {"warmup": ["Hello, how are you?"], "praise": ["Great job!"], ...}
+    """
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        print("[WARNING] GOOGLE_API_KEY not set, cannot classify sentences.")
+        return {cat: [] for cat in VALID_CATEGORIES}
+
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.0,
+        max_retries=2,
+    )
+
+    # Build numbered sentence list for the prompt
+    numbered = "\n".join(f"{i+1}. {s}" for i, s in enumerate(sentences))
+
+    prompt = ChatPromptTemplate.from_template(
+        """You are a text classifier for a coaching/appraisal conversation framework.
+Classify EACH of the following sentences into EXACTLY ONE of these categories:
+
+- warmup: Greetings, ice-breakers, casual conversation starters, asking how someone is doing
+- praise: Positive feedback, compliments, recognition of good work or achievements
+- suggest: Suggestions for improvement (both positive and constructive/negative), recommendations, advice
+- listen: Active listening cues, acknowledgements, paraphrasing what someone said, empathetic responses
+- direct: Direct instructions, action items, commands, clear directives about what to do
+
+Sentences:
+{sentences}
+
+Return ONLY a valid JSON object (no markdown, no explanation) mapping each category to a list of sentence numbers. Example:
+{{
+  "warmup": [1, 3],
+  "praise": [2],
+  "suggest": [4, 7],
+  "listen": [5],
+  "direct": [6]
+}}
+
+Every sentence number (1 to {count}) must appear in exactly one category. Do not skip any sentence."""
+    )
+
+    try:
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({"sentences": numbered, "count": str(len(sentences))})
+
+        # Clean potential markdown formatting
+        response = response.strip()
+        if response.startswith("```json"):
+            response = response[7:-3].strip()
+        elif response.startswith("```"):
+            response = response[3:-3].strip()
+
+        raw_result = json.loads(response)
+
+        # Map sentence numbers back to sentence text
+        classified = {cat: [] for cat in VALID_CATEGORIES}
+        for cat, indices in raw_result.items():
+            cat_lower = cat.lower()
+            if cat_lower in VALID_CATEGORIES and isinstance(indices, list):
+                for idx in indices:
+                    idx_int = int(idx) - 1  # Convert 1-based to 0-based
+                    if 0 <= idx_int < len(sentences):
+                        classified[cat_lower].append(sentences[idx_int])
+
+        return classified
+
+    except Exception as e:
+        print(f"[WARNING] LLM sentence classification failed: {e}")
+        return {cat: [] for cat in VALID_CATEGORIES}
+
+
 def add_document_to_db(filepath: str):
     """
     Load a document (PDF, DOCX, or TXT), split it into sentences,
-    classify each sentence using the Template_classifier_model,
+    classify each sentence using Gemini LLM,
     and route/add the sentences to their respective category RAG database.
     """
     if filepath.endswith('.pdf'):
@@ -84,29 +142,25 @@ def add_document_to_db(filepath: str):
     if not sentences:
         return 0
 
-    clf = _get_template_classifier()
     from langchain_core.documents import Document
 
-    # Group sentences by category
-    categorized_docs = {cat: [] for cat in CATEGORY_MAP.values()}
-    debug_log = {cat: [] for cat in CATEGORY_MAP.values()}
+    # Classify all sentences using Gemini LLM
+    classified = _classify_sentences_with_llm(sentences)
 
-    for sentence in sentences:
-        result = clf.classify(sentence)
-        label = result.get("label")
-        category = CATEGORY_MAP.get(label)
-        if category:
+    # Group sentences by category and build debug log
+    categorized_docs = {cat: [] for cat in VALID_CATEGORIES}
+    debug_log = {cat: [] for cat in VALID_CATEGORIES}
+
+    for category, cat_sentences in classified.items():
+        for sentence in cat_sentences:
             doc = Document(
                 page_content=sentence,
-                metadata={"source": os.path.basename(filepath), "label": label}
+                metadata={"source": os.path.basename(filepath), "label": category}
             )
             categorized_docs[category].append(doc)
-            
-            # Store detail for the verification file
             debug_log[category].append({
                 "sentence": sentence,
-                "predicted_label": label,
-                "confidence": round(result.get("confidence", 0.0), 4)
+                "predicted_label": category,
             })
 
     total_added = 0
