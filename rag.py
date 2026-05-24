@@ -67,18 +67,18 @@ def _classify_sentences_with_llm(sentences: list[str]) -> dict[str, list[str]]:
 
     prompt = ChatPromptTemplate.from_template(
         """You are a text classifier for a coaching/appraisal conversation framework.
-Classify EACH of the following sentences into EXACTLY ONE of these categories:
+Classify whether each of the guidelines,directions,examples are for the warmup,praise,suggest,listen or direct:
 
-- warmup: Greetings, ice-breakers, casual conversation starters, asking how someone is doing
-- praise: Positive feedback, compliments, recognition of good work or achievements
-- suggest: Suggestions for improvement (both positive and constructive/negative), recommendations, advice
-- listen: Active listening cues, acknowledgements, paraphrasing what someone said, empathetic responses
-- direct: Direct instructions, action items, commands, clear directives about what to do
+- warmup: Guidelines, directions, or examples related to greetings, ice-breakers, casual conversation starters, or asking how someone is doing.
+- praise: Guidelines, directions, or examples related to positive feedback, compliments, or recognition of good work or achievements.
+- suggest: Guidelines, directions, or examples related to suggestions for improvement (both positive and constructive/negative), recommendations, or advice.
+- listen: Guidelines, directions, or examples related to active listening cues, acknowledgements, paraphrasing what someone said, or empathetic responses.
+- direct: Guidelines, directions, or examples related to direct instructions, action items, commands, or clear directives about what to do.
 
-Sentences:
+Guidelines/Directions/Examples:
 {sentences}
 
-Return ONLY a valid JSON object (no markdown, no explanation) mapping each category to a list of sentence numbers. Example:
+Return ONLY a valid JSON object (no markdown, no explanation) mapping each category to a list of item numbers. Example:
 {{
   "warmup": [1, 3],
   "praise": [2],
@@ -87,7 +87,7 @@ Return ONLY a valid JSON object (no markdown, no explanation) mapping each categ
   "direct": [6]
 }}
 
-Every sentence number (1 to {count}) must appear in exactly one category. Do not skip any sentence."""
+Every item number (1 to {count}) must appear in exactly one category. Do not skip any item."""
     )
 
     try:

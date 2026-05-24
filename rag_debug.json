@@ -1,25 +1,26 @@
 {
-    "praise": [],
-    "direct": [
+    "listen": [],
+    "praise": [
         {
             "sentence": "praise the employee on what he or she has done good in a friendly tone.",
-            "predicted_label": "direct"
+            "predicted_label": "praise"
         }
     ],
-    "warmup": [],
-    "listen": [],
-    "suggest": [
+    "warmup": [
         {
             "sentence": "warm up should start with a greeting and positive tone.",
-            "predicted_label": "suggest"
+            "predicted_label": "warmup"
         },
         {
             "sentence": "with some casual talk.",
-            "predicted_label": "suggest"
-        },
+            "predicted_label": "warmup"
+        }
+    ],
+    "direct": [
         {
             "sentence": "Directions should be clear",
-            "predicted_label": "suggest"
+            "predicted_label": "direct"
         }
-    ]
+    ],
+    "suggest": []
 }
