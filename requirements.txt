@@ -15,6 +15,9 @@ ffmpeg-python
 numpy
 scipy
 
+# --- Semantic Segmentation (sentence splitting) ---
+nltk
+
 tqdm
 pandas
 
