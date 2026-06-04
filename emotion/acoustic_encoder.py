@@ -56,7 +56,14 @@ class AcousticEncoder(nn.Module):
     @staticmethod
     def load_audio(audio_path: str) -> torch.Tensor:
         """Load an audio file and return a mono 16 kHz waveform tensor [1, samples]."""
-        waveform, sr = torchaudio.load(audio_path)
+        import soundfile as sf
+        audio_np, sr = sf.read(audio_path)
+        audio_np = audio_np.astype(np.float32)
+        if audio_np.ndim > 1:
+            waveform = torch.from_numpy(audio_np.T)
+        else:
+            waveform = torch.from_numpy(audio_np).unsqueeze(0)
+
         if sr != SAMPLE_RATE:
             waveform = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(waveform)
         if waveform.shape[0] > 1:

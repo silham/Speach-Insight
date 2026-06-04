@@ -5,7 +5,7 @@ import soundfile as sf
 import warnings
 
 # Suppress Pyannote/Torchcodec and PyTorch standard deviation warnings
-warnings.filterwarnings("ignore", message=".*torchcodec is not installed correctly.*")
+warnings.filterwarnings("ignore", message="(?s).*torchcodec.*")
 warnings.filterwarnings("ignore", message=".*degrees of freedom is <= 0.*")
 
 from dotenv import load_dotenv

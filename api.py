@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings("ignore", message="(?s).*torchcodec.*")
+
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware

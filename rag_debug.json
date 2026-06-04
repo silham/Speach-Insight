@@ -1,11 +1,12 @@
 {
-    "listen": [],
     "praise": [
         {
             "sentence": "praise the employee on what he or she has done good in a friendly tone.",
             "predicted_label": "praise"
         }
     ],
+    "listen": [],
+    "suggest": [],
     "warmup": [
         {
             "sentence": "warm up should start with a greeting and positive tone.",
@@ -21,6 +22,5 @@
             "sentence": "Directions should be clear",
             "predicted_label": "direct"
         }
-    ],
-    "suggest": []
+    ]
 }
