@@ -1,6 +1,15 @@
 import warnings
 warnings.filterwarnings("ignore", message="(?s).*torchcodec.*")
 
+import sys
+# Force stdout/stderr to use UTF-8 on Windows to prevent UnicodeEncodeError from emoji prints
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from pydantic import BaseModel
