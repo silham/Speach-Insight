@@ -306,13 +306,14 @@ Return ONLY a valid JSON object (no markdown) with one key per category. Example
         return fallback
 
 
-def generate_report(evidence_data: list, score_data: dict):
+def generate_report(evidence_data: list, score_data: dict, segments: list = None):
     """
     Generate a detailed report from evidence.json data in a SINGLE LLM call.
 
     Args:
         evidence_data: list of evidence dicts (from evidence.json)
         score_data: dict of all scores (from score.json)
+        segments: list of all transcript segments
 
     Returns:
         dict with the full report structure, or a fallback on error.
@@ -330,15 +331,30 @@ def generate_report(evidence_data: list, score_data: dict):
 
     evidence_str = json.dumps(evidence_data, indent=2)
     score_str = json.dumps(score_data, indent=2)
+    
+    # Minimize segment data to fit context limit safely
+    minimized_segments = []
+    if segments:
+        for seg in segments:
+            minimized_segments.append({
+                "segment_id": seg.get("segment_id"),
+                "speaker": seg.get("speaker"),
+                "text": seg.get("text"),
+                "emotion": seg.get("emotion")
+            })
+    segments_str = json.dumps(minimized_segments, indent=2)
 
     prompt = ChatPromptTemplate.from_template(
-        """You are a professional speech coach.The speakers are given a speech template to follow and the evaluation is done based on that. The details for the reporting is given below. Based on the scoring evidence below, generate a detailed performance report and also give reasons for the scores and detailed suggestions, the generated report should be the final outcome.
+        """You are a professional speech coach.The speakers are given a speech template to follow and the evaluation is done based on that. The details for the reporting is given below. Based on the scoring evidence and transcript segments below, generate a detailed performance report and also give reasons for the scores and detailed suggestions, the generated report should be the final outcome. Additionally, provide a short, constructive comment for each individual audio segment based on its content and emotion.
 
 Scores:
 {scores}
 
 Evidence:
 {evidence}
+
+Transcript Segments:
+{segments}
 
 Return ONLY a valid JSON object (no markdown) with this exact structure:
 {{
@@ -382,13 +398,19 @@ Return ONLY a valid JSON object (no markdown) with this exact structure:
     }}
   ],
   "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1 with specific suggestion", "improvement 2 with specific suggestion"]
+  "improvements": ["improvement 1 with specific suggestion", "improvement 2 with specific suggestion"],
+  "segment_comments": [
+    {{
+      "segment_id": <number>,
+      "comment": "Constructive comment on this segment"
+    }}
+  ]
 }}"""
     )
 
     try:
         chain = prompt | llm | StrOutputParser()
-        response = chain.invoke({"scores": score_str, "evidence": evidence_str})
+        response = chain.invoke({"scores": score_str, "evidence": evidence_str, "segments": segments_str})
 
         response = response.strip()
         if response.startswith("```json"):

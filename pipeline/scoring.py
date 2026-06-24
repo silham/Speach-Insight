@@ -465,7 +465,7 @@ def generate_score_and_evidence(job_output_folder: str):
     # 11. GENERATE report.json (2nd and final LLM call)
     # ══════════════════════════════════════════════════════════════════
     try:
-        report_data = generate_report(evidence_data, score_data)
+        report_data = generate_report(evidence_data, score_data, segments)
         report_path = os.path.join(job_output_folder, "report.json")
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(report_data, f, indent=4)

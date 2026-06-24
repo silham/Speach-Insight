@@ -4,22 +4,22 @@ import './App.css'
 
 // ── Neon color maps for minimal dark theme ──
 const EMOTION_STYLES = {
-  angry: { bg: 'rgba(248, 113, 113, 0.1)', text: '#F87171', border: 'rgba(248, 113, 113, 0.3)', label: 'Angry' },
-  disgust: { bg: 'rgba(251, 146, 60, 0.1)', text: '#FB923C', border: 'rgba(251, 146, 60, 0.3)', label: 'Disgust' },
-  fear: { bg: 'rgba(167, 139, 250, 0.1)', text: '#A78BFA', border: 'rgba(167, 139, 250, 0.3)', label: 'Fear' },
-  happy: { bg: 'rgba(52, 211, 153, 0.1)', text: '#34D399', border: 'rgba(52, 211, 153, 0.3)', label: 'Happy' },
-  sad: { bg: 'rgba(96, 165, 250, 0.1)', text: '#60A5FA', border: 'rgba(96, 165, 250, 0.3)', label: 'Sad' },
-  surprise: { bg: 'rgba(244, 114, 182, 0.1)', text: '#F472B6', border: 'rgba(244, 114, 182, 0.3)', label: 'Surprise' },
-  neutral: { bg: 'rgba(148, 163, 184, 0.1)', text: '#94A3B8', border: 'rgba(148, 163, 184, 0.3)', label: 'Neutral' },
+  angry: { bg: 'rgba(255, 0, 85, 0.15)', text: '#FF0055', border: 'rgba(255, 0, 85, 0.4)', label: 'Angry' },
+  disgust: { bg: 'rgba(255, 102, 0, 0.15)', text: '#FF6600', border: 'rgba(255, 102, 0, 0.4)', label: 'Disgust' },
+  fear: { bg: 'rgba(176, 38, 255, 0.15)', text: '#B026FF', border: 'rgba(176, 38, 255, 0.4)', label: 'Fear' },
+  happy: { bg: 'rgba(0, 255, 157, 0.15)', text: '#00FF9D', border: 'rgba(0, 255, 157, 0.4)', label: 'Happy' },
+  sad: { bg: 'rgba(0, 240, 255, 0.15)', text: '#00F0FF', border: 'rgba(0, 240, 255, 0.4)', label: 'Sad' },
+  surprise: { bg: 'rgba(255, 230, 0, 0.15)', text: '#FFE600', border: 'rgba(255, 230, 0, 0.4)', label: 'Surprise' },
+  neutral: { bg: 'rgba(212, 212, 216, 0.1)', text: '#D4D4D8', border: 'rgba(212, 212, 216, 0.3)', label: 'Neutral' },
 }
 
 const TEMPLATE_STYLES = {
-  Direct: { border: 'rgba(248, 113, 113, 0.3)', text: '#F87171', bg: 'rgba(248, 113, 113, 0.1)' },
-  Listen: { border: 'rgba(96, 165, 250, 0.3)', text: '#60A5FA', bg: 'rgba(96, 165, 250, 0.1)' },
-  NSuggest: { border: 'rgba(251, 191, 36, 0.3)', text: '#FBBF24', bg: 'rgba(251, 191, 36, 0.1)' },
-  PSuggest: { border: 'rgba(52, 211, 153, 0.3)', text: '#34D399', bg: 'rgba(52, 211, 153, 0.1)' },
-  Praise: { border: 'rgba(244, 114, 182, 0.3)', text: '#F472B6', bg: 'rgba(244, 114, 182, 0.1)' },
-  WarmUp: { border: 'rgba(251, 146, 60, 0.3)', text: '#FB923C', bg: 'rgba(251, 146, 60, 0.1)' },
+  Direct: { border: 'rgba(255, 0, 85, 0.4)', text: '#FF0055', bg: 'rgba(255, 0, 85, 0.15)' },
+  Listen: { border: 'rgba(0, 240, 255, 0.4)', text: '#00F0FF', bg: 'rgba(0, 240, 255, 0.15)' },
+  NSuggest: { border: 'rgba(255, 230, 0, 0.4)', text: '#FFE600', bg: 'rgba(255, 230, 0, 0.15)' },
+  PSuggest: { border: 'rgba(0, 255, 157, 0.4)', text: '#00FF9D', bg: 'rgba(0, 255, 157, 0.15)' },
+  Praise: { border: 'rgba(176, 38, 255, 0.4)', text: '#B026FF', bg: 'rgba(176, 38, 255, 0.15)' },
+  WarmUp: { border: 'rgba(255, 102, 0, 0.4)', text: '#FF6600', bg: 'rgba(255, 102, 0, 0.15)' },
 }
 
 const CATEGORY_NAMES = {
@@ -32,21 +32,21 @@ const CATEGORY_NAMES = {
 }
 
 const CATEGORY_COLORS = {
-  template: '#818CF8',
-  warmup: '#FB923C',
-  praise: '#F472B6',
-  suggest: '#2DD4BF',
-  listen: '#60A5FA',
-  direct: '#F87171',
+  template: '#B026FF',
+  warmup: '#FF6600',
+  praise: '#FF0055',
+  suggest: '#00FF9D',
+  listen: '#00F0FF',
+  direct: '#FFE600',
 }
 
 const SPEAKER_THEMES = [
-  { bg: 'rgba(129, 140, 248, 0.1)', border: 'rgba(129, 140, 248, 0.3)', text: '#818CF8', primary: '#6366F1' },
-  { bg: 'rgba(45, 212, 191, 0.1)', border: 'rgba(45, 212, 191, 0.3)', text: '#2DD4BF', primary: '#14B8A6' },
-  { bg: 'rgba(251, 146, 60, 0.1)', border: 'rgba(251, 146, 60, 0.3)', text: '#FB923C', primary: '#F97316' },
-  { bg: 'rgba(244, 114, 182, 0.1)', border: 'rgba(244, 114, 182, 0.3)', text: '#F472B6', primary: '#EC4899' },
-  { bg: 'rgba(56, 189, 248, 0.1)', border: 'rgba(56, 189, 248, 0.3)', text: '#38BDF8', primary: '#0EA5E9' },
-  { bg: 'rgba(52, 211, 153, 0.1)', border: 'rgba(52, 211, 153, 0.3)', text: '#34D399', primary: '#10B981' },
+  { bg: 'rgba(0, 240, 255, 0.15)', border: 'rgba(0, 240, 255, 0.4)', text: '#00F0FF', primary: '#00F0FF' },
+  { bg: 'rgba(176, 38, 255, 0.15)', border: 'rgba(176, 38, 255, 0.4)', text: '#B026FF', primary: '#B026FF' },
+  { bg: 'rgba(0, 255, 157, 0.15)', border: 'rgba(0, 255, 157, 0.4)', text: '#00FF9D', primary: '#00FF9D' },
+  { bg: 'rgba(255, 0, 85, 0.15)', border: 'rgba(255, 0, 85, 0.4)', text: '#FF0055', primary: '#FF0055' },
+  { bg: 'rgba(255, 230, 0, 0.15)', border: 'rgba(255, 230, 0, 0.4)', text: '#FFE600', primary: '#FFE600' },
+  { bg: 'rgba(255, 102, 0, 0.15)', border: 'rgba(255, 102, 0, 0.4)', text: '#FF6600', primary: '#FF6600' },
 ]
 
 function SvgIcon({ name, className = "" }) {
@@ -193,6 +193,7 @@ function App() {
   const [expandedCategory, setExpandedCategory] = useState(null)
   const [rightPanelTab, setRightPanelTab] = useState('report') // 'report' or 'inspector'
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false)
+  const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false)
 
   // RAG upload state
   const [ragFile, setRagFile] = useState(null)
@@ -500,84 +501,10 @@ function App() {
             {metadata && !loading && (
               <div className="pipeline-dashboard-grid fade-in">
                 
-                {/* Visual Speech Timeline row */}
-                <div className="dashboard-row double-split">
-                  
-                  {/* Speech Timeline Card */}
-                  <section className="timeline-container card-panel flex-grow">
-                    <div className="section-header">
-                      <div className="header-text-group">
-                        <h4>Conversation Turn Timeline</h4>
-                        <span className="section-subtitle">Visual chronology of speaker turns. Tap blocks to inspect details and play.</span>
-                      </div>
-                      {playingSegmentId !== null && (
-                        <div className="timeline-play-status">
-                          <Soundwave />
-                          <span>Playing turn #{playingSegmentId}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="speech-timeline">
-                      {results.map((row) => {
-                        const duration = row.end_time - row.start_time
-                        const percentWidth = (duration / metadata.total_duration) * 100
-                        const isSelected = row.segment_id === selectedSegmentId
-                        const isPlaying = row.segment_id === playingSegmentId
-                        const theme = getSpeakerTheme(row.speaker)
-
-                        return (
-                          <div
-                            key={row.segment_id}
-                            className={`timeline-block ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''}`}
-                            style={{
-                              width: `${Math.max(percentWidth, 1.2)}%`,
-                              backgroundColor: theme.primary,
-                              borderColor: isSelected || isPlaying ? '#000000' : theme.border,
-                            }}
-                            onClick={() => selectAndScrollToSegment(row.segment_id, row.audio_url)}
-                            title={`${row.speaker} (${row.start_time.toFixed(1)}s - ${row.end_time.toFixed(1)}s): "${row.text.substring(0, 40)}..."`}
-                          >
-                            <span className="timeline-block-label" style={{ color: '#ffffff' }}>
-                              {row.speaker.split('_')[1] || row.speaker}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </section>
-
-                  {/* Speaker breakdown Card */}
-                  <section className="speaker-breakdown card-panel flex-shrink">
-                    <div className="section-header">
-                      <h4>Talk-Time Allocation</h4>
-                    </div>
-                    <div className="speaker-breakdown-list">
-                      {speakerStats.map(spk => (
-                        <div key={spk.name} className="spk-breakdown-item">
-                          <div className="spk-breakdown-labels">
-                            <span className="spk-breakdown-name" style={{ color: spk.theme.text }}>{spk.name}</span>
-                            <span className="spk-breakdown-time">{spk.talkTime}s ({spk.percentage}%)</span>
-                          </div>
-                          <div className="spk-breakdown-track">
-                            <div
-                              className="spk-breakdown-fill"
-                              style={{
-                                width: `${spk.percentage}%`,
-                                backgroundColor: spk.theme.primary
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-
-                {/* Second row: Analysis Split */}
-                <div className="analysis-row">
+                {/* Full Width Evaluation Report */}
+                <div className="dashboard-row">
                   {/* Left Column: Performance Report */}
-                  <section className="analysis-column card-panel">
+                  <section className="analysis-column card-panel" style={{ width: "100%" }}>
                     <div className="section-header">
                       <h4>Evaluation Report</h4>
                     </div>
@@ -689,6 +616,43 @@ function App() {
                               </div>
                             )}
                           </div>
+
+                          {/* Segment Comments */}
+                          {report.segment_comments && report.segment_comments.length > 0 && (
+                            <div className="segment-comments-section" style={{ marginTop: '2rem' }}>
+                              <h4 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Audio Segment Feedback</h4>
+                              <div className="segment-comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {report.segment_comments.map((seg, i) => {
+                                  // Try to find the corresponding segment in results to show the text or speaker if we want
+                                  const transcriptRow = results.find(r => r.segment_id === seg.segment_id)
+                                  
+                                  return (
+                                    <div key={i} className="segment-comment-card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                        <h5 style={{ margin: 0, color: 'var(--primary-color)' }}>
+                                          Segment {seg.segment_id} {transcriptRow ? `- ${transcriptRow.speaker}` : ''}
+                                        </h5>
+                                        {transcriptRow && (
+                                          <button 
+                                            onClick={() => selectAndScrollToSegment(seg.segment_id, transcriptRow.audio_url)}
+                                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                                          >
+                                            View in Inspector
+                                          </button>
+                                        )}
+                                      </div>
+                                      {transcriptRow && (
+                                        <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                                          "{transcriptRow.text}"
+                                        </p>
+                                      )}
+                                      <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: '1.4' }}>{seg.comment}</p>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="report-empty-state">
@@ -697,9 +661,99 @@ function App() {
                       )}
                     </div>
                   </section>
+                </div>
 
-                  {/* Right Column: Segment Inspector */}
-                  <section className="analysis-column card-panel">
+                {/* More Details Accordion */}
+                <div className="transcript-accordion-container card-panel" style={{ marginTop: '1.5rem' }}>
+                  <button 
+                    className="transcript-accordion-toggle" 
+                    onClick={() => setIsMoreDetailsOpen(!isMoreDetailsOpen)}
+                  >
+                    <h4>More Details</h4>
+                    <SvgIcon name="chevron" className={`accordion-icon ${isMoreDetailsOpen ? 'open' : ''}`} />
+                  </button>
+                  
+                  <div className={`transcript-accordion-content ${isMoreDetailsOpen ? 'open' : ''}`}>
+                    <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                      
+                      {/* Visual Speech Timeline row */}
+                <div className="dashboard-row double-split">
+                  
+                  {/* Speech Timeline Card */}
+                  <section className="timeline-container card-panel flex-grow">
+                    <div className="section-header">
+                      <div className="header-text-group">
+                        <h4>Conversation Turn Timeline</h4>
+                        <span className="section-subtitle">Visual chronology of speaker turns. Tap blocks to inspect details and play.</span>
+                      </div>
+                      {playingSegmentId !== null && (
+                        <div className="timeline-play-status">
+                          <Soundwave />
+                          <span>Playing turn #{playingSegmentId}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="speech-timeline">
+                      {results.map((row) => {
+                        const duration = row.end_time - row.start_time
+                        const percentWidth = (duration / metadata.total_duration) * 100
+                        const isSelected = row.segment_id === selectedSegmentId
+                        const isPlaying = row.segment_id === playingSegmentId
+                        const theme = getSpeakerTheme(row.speaker)
+
+                        return (
+                          <div
+                            key={row.segment_id}
+                            className={`timeline-block ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''}`}
+                            style={{
+                              width: `${Math.max(percentWidth, 1.2)}%`,
+                              backgroundColor: theme.primary,
+                              borderColor: isSelected || isPlaying ? '#000000' : theme.border,
+                            }}
+                            onClick={() => selectAndScrollToSegment(row.segment_id, row.audio_url)}
+                            title={`${row.speaker} (${row.start_time.toFixed(1)}s - ${row.end_time.toFixed(1)}s): "${row.text.substring(0, 40)}..."`}
+                          >
+                            <span className="timeline-block-label" style={{ color: '#ffffff' }}>
+                              {row.speaker.split('_')[1] || row.speaker}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  {/* Speaker breakdown Card */}
+                  <section className="speaker-breakdown card-panel flex-shrink">
+                    <div className="section-header">
+                      <h4>Talk-Time Allocation</h4>
+                    </div>
+                    <div className="speaker-breakdown-list">
+                      {speakerStats.map(spk => (
+                        <div key={spk.name} className="spk-breakdown-item">
+                          <div className="spk-breakdown-labels">
+                            <span className="spk-breakdown-name" style={{ color: spk.theme.text }}>{spk.name}</span>
+                            <span className="spk-breakdown-time">{spk.talkTime}s ({spk.percentage}%)</span>
+                          </div>
+                          <div className="spk-breakdown-track">
+                            <div
+                              className="spk-breakdown-fill"
+                              style={{
+                                width: `${spk.percentage}%`,
+                                backgroundColor: spk.theme.primary
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                      {/* Utterance Inspector */}
+                      <div className="dashboard-row" style={{ marginTop: '1.5rem' }}>
+                        {/* Right Column: Segment Inspector */}
+                  <section className="analysis-column card-panel" style={{ width: "100%" }}>
                     <div className="section-header">
                       <h4>Utterance Inspector</h4>
                     </div>
@@ -814,7 +868,12 @@ function App() {
                       )}
                     </div>
                   </section>
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
+
 
                 {/* Third row: Transcript Accordion */}
                 <div className="transcript-accordion-container card-panel">

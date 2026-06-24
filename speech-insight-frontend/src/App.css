@@ -11,7 +11,9 @@
 /* ── Sidebar Navigation ── */
 .sidebar-nav {
   width: 280px;
-  background-color: var(--bg-card);
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
   border-right: 1px solid var(--border-color);
   padding: 2rem 1.5rem;
   display: flex;
@@ -19,6 +21,7 @@
   height: 100vh;
   flex-shrink: 0;
   z-index: 10;
+  box-shadow: 5px 0 30px rgba(0, 0, 0, 0.4);
 }
 
 .sidebar-brand {
@@ -178,18 +181,20 @@
 
 /* ── Layout Panels ── */
 .card-panel {
-  background-color: var(--bg-card);
+  background: var(--bg-card);
   backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 1.5rem;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-panel:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(79, 70, 229, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 /* ── Upload Panel ── */
@@ -286,21 +291,24 @@
 
 .btn-primary {
   width: 100%;
-  background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  color: #000;
   border: none;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.95rem;
   padding: 0.85rem;
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
+  box-shadow: 0 4px 14px var(--accent-glow);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px var(--accent-glow);
+  filter: brightness(1.2);
 }
 
 .btn-primary:disabled {
@@ -630,12 +638,14 @@
 }
 
 .bubble-wrapper {
-  background-color: var(--bg-card);
+  background: rgba(20, 20, 30, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 1.1rem 1.3rem;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -643,9 +653,10 @@
 }
 
 .bubble-wrapper:hover {
-  transform: translateX(3px);
-  border-color: var(--border-hover);
-  box-shadow: var(--shadow-sm);
+  transform: translateX(4px) translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 10px var(--accent-glow);
+  background: rgba(20, 20, 30, 0.5);
 }
 
 .bubble-wrapper.active-bubble {
