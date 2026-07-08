@@ -175,6 +175,20 @@ function TemplateBadge({ label }) {
 function App() {
   const [activeTab, setActiveTab] = useState('pipeline')
 
+  // Theme state — persisted in localStorage
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('si-theme')
+    return saved !== null ? saved === 'dark' : true
+  })
+
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const next = !prev
+      localStorage.setItem('si-theme', next ? 'dark' : 'light')
+      return next
+    })
+  }
+
   // Pipeline execution state
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -388,7 +402,7 @@ function App() {
   const activeSegment = results.find(r => r.segment_id === selectedSegmentId)
 
   return (
-    <div className="saas-layout">
+    <div className="saas-layout" data-theme={isDark ? 'dark' : 'light'}>
       {/* Sidebar Navigation */}
       <aside className="sidebar-nav">
         <div className="sidebar-brand">
@@ -399,6 +413,31 @@ function App() {
             <h3>SpeechInSight</h3>
             <span>Coaching Appraisals</span>
           </div>
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDark ? (
+              /* Sun icon — click to go light */
+              <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              /* Moon icon — click to go dark */
+              <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
         </div>
 
         <nav className="nav-menu">
@@ -570,12 +609,11 @@ function App() {
                           {/* Evaluation category breakdown list */}
                           <div className="report-categories-list">
                             {report.categories && report.categories.map((cat, idx) => {
-                              const isExpanded = expandedCategory === cat.name
                               const progressPercent = (cat.score / cat.max_score) * 100
                               const catColor = CATEGORY_COLORS[cat.name] || '#6366f1'
                               return (
-                                <div key={idx} className={`eval-row ${isExpanded ? 'open' : ''}`}>
-                                  <div className="eval-summary" onClick={() => toggleCategory(cat.name)}>
+                                <div key={idx} className="eval-row">
+                                  <div className="eval-summary" style={{ cursor: 'default' }}>
                                     <div className="eval-info">
                                       <span className="eval-name">{CATEGORY_NAMES[cat.name] || cat.name}</span>
                                       <span className="eval-score" style={{ color: catColor }}>{cat.score}/{cat.max_score}</span>
@@ -583,14 +621,9 @@ function App() {
                                     <div className="eval-progress-container">
                                       <div className="eval-progress-bar" style={{ width: `${progressPercent}%`, backgroundColor: catColor }} />
                                     </div>
-                                    <div className="eval-dropdown-toggle">
-                                      <SvgIcon name="chevron" className="icon-chevron" />
-                                    </div>
                                   </div>
-                                  {isExpanded && (
-                                    <div className="eval-details-pane">
-                                      <p className="eval-description">{cat.description}</p>
-                                    </div>
+                                  {cat.description && (
+                                    <p className="cat-description-always">{cat.description}</p>
                                   )}
                                 </div>
                               )
@@ -616,43 +649,6 @@ function App() {
                               </div>
                             )}
                           </div>
-
-                          {/* Segment Comments */}
-                          {report.segment_comments && report.segment_comments.length > 0 && (
-                            <div className="segment-comments-section" style={{ marginTop: '2rem' }}>
-                              <h4 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Audio Segment Feedback</h4>
-                              <div className="segment-comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {report.segment_comments.map((seg, i) => {
-                                  // Try to find the corresponding segment in results to show the text or speaker if we want
-                                  const transcriptRow = results.find(r => r.segment_id === seg.segment_id)
-                                  
-                                  return (
-                                    <div key={i} className="segment-comment-card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                        <h5 style={{ margin: 0, color: 'var(--primary-color)' }}>
-                                          Segment {seg.segment_id} {transcriptRow ? `- ${transcriptRow.speaker}` : ''}
-                                        </h5>
-                                        {transcriptRow && (
-                                          <button 
-                                            onClick={() => selectAndScrollToSegment(seg.segment_id, transcriptRow.audio_url)}
-                                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
-                                          >
-                                            View in Inspector
-                                          </button>
-                                        )}
-                                      </div>
-                                      {transcriptRow && (
-                                        <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                                          "{transcriptRow.text}"
-                                        </p>
-                                      )}
-                                      <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: '1.4' }}>{seg.comment}</p>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       ) : (
                         <div className="report-empty-state">
@@ -871,6 +867,42 @@ function App() {
                       </div>
 
                     </div>
+
+                    {/* ── Audio Segment Feedback (moved here from Evaluation Report) ── */}
+                    {report && report.segment_comments && report.segment_comments.length > 0 && (
+                      <div className="segment-feedback-section">
+                        <h4 className="segment-feedback-title">Audio Segment Feedback</h4>
+                        <div className="segment-feedback-list">
+                          {report.segment_comments.map((seg, i) => {
+                            const transcriptRow = results.find(r => r.segment_id === seg.segment_id)
+                            return (
+                              <div key={i} className="segment-comment-card">
+                                <div className="segment-comment-header">
+                                  <h5 className="segment-comment-title">
+                                    {seg.segment_id != null
+                                      ? `Segment ${seg.segment_id}${transcriptRow ? ` — ${transcriptRow.speaker}` : ''}`
+                                      : (seg.comment.match(/^(SPEAKER_\d+)/) ? seg.comment.match(/^(SPEAKER_\d+)/)[1] : `Segment ${i + 1}`)}
+                                  </h5>
+                                  {transcriptRow && (
+                                    <button
+                                      className="segment-comment-link"
+                                      onClick={() => selectAndScrollToSegment(seg.segment_id, transcriptRow.audio_url)}
+                                    >
+                                      View in Inspector
+                                    </button>
+                                  )}
+                                </div>
+                                {transcriptRow && (
+                                  <p className="segment-comment-quote">"{transcriptRow.text}"</p>
+                                )}
+                                <p className="segment-comment-text">{seg.comment}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
 
