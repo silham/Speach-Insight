@@ -115,6 +115,12 @@ class SegmentResult:
     template_label: str = ""
     template_confidence: float = 0.0
 
+    # ── from speaker role classification ──────────────────────────────
+    role: str = "unknown"
+    role_confidence: float = 0.0
+    role_probability_distribution: dict[str, float] = field(default_factory=dict)
+    role_evidence: list[str] = field(default_factory=list)
+
     # ── extensibility hook: future models write here ──────────────────
     # e.g.  result.extras["lead_score"] = 0.92
     extras: dict[str, Any] = field(default_factory=dict)
@@ -166,6 +172,9 @@ class JobResult:
 
     # ── from lead speaker identification  [Phase 8] ───────────────────
     lead_speaker: Optional[str] = None
+
+    # ── from speaker role classification ──────────────────────────────
+    speaker_roles: dict[str, dict] = field(default_factory=dict)
 
     # ── aggregate stats (computed on finalise()) ──────────────────────
     total_speakers: int = 0
