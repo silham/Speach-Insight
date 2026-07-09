@@ -43,3 +43,6 @@ Template_classifier_model/
 
 # Editor
 .vscode/
+
+# Speaker role classification models
+pipeline/role_classification/models/
