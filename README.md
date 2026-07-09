@@ -337,5 +337,5 @@ in the API response. Full instructions are in [Dataflow.md](Dataflow.md).
 ## Developer Reference Documentation
 
 Detailed architectural specifications, interface definitions, execution flow diagrams, and contributor extension guides are available in the module folders:
-* **Role Prediction & Falling Back:** [pipeline/role_classification/README.md](file:///Users/denuwanwijesinghe/Documents/BSc. Artficial Intellligence/se_project/project/Speach-Insight/pipeline/role_classification/README.md)
-* **Lead Speaker Target Resolver:** [pipeline/lead_speaker/README.md](file:///Users/denuwanwijesinghe/Documents/BSc. Artficial Intellligence/se_project/project/Speach-Insight/pipeline/lead_speaker/README.md)
+* **Role Prediction & Falling Back:** [pipeline/role_classification/README.md](pipeline/role_classification/README.md)
+* **Lead Speaker Target Resolver:** [pipeline/lead_speaker/README.md](pipeline/lead_speaker/README.md)
