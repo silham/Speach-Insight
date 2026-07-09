@@ -214,15 +214,3 @@ Configurable parameters are stored in environment variables or within system con
 * **Invariant 1:** Never change the core canonical labels (`Leader`, `HR`, `Junior`, `Other`) without updating both the frontend utilities and the downstream target resolver.
 * **Invariant 2:** The target resolver must never call LLMs or rebuild feature arrays; it must operate on finalized outputs.
 * **Invariant 3:** Do not bypass provenance logging, as the frontend uses this metadata to explain classification paths in developer mode.
-
----
-
-## 12. Future Improvements
-
-### Engineering
-* **Batch Fallback Processing:** Group low-confidence speakers into a single bulk Gemini request to reduce network latency and token costs.
-* **Local Transformer Fallback:** Replace Gemini with a local lightweight transformer model (e.g., Llama-3-8B-Instruct) to run the fallback loop entirely on-premise.
-
-### Research
-* **Sequence-Aware Classification:** Incorporate conversation turn progression and timing features into XGBoost vector arrays.
-* **Active Learning Pipeline:** Implement a pipeline to export low-confidence turns to labeling platforms, allowing continuous model retraining.
