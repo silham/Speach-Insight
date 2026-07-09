@@ -14,8 +14,13 @@ class Transcriber:
     def __init__(self, model_path=MODEL_PATH):
         print(f"⏳ Loading Wav2Vec2 Model from {model_path}...")
         try:
-            if not os.path.exists(model_path):
-                raise FileNotFoundError(f"Folder {model_path} does not exist. Did you unzip the model?")
+            # Check if directory exists and is complete (has vocab.json and model weights)
+            vocab_exists = os.path.exists(os.path.join(model_path, "vocab.json")) if os.path.exists(model_path) else False
+            model_exists = any(os.path.exists(os.path.join(model_path, f)) for f in ["pytorch_model.bin", "model.safetensors"]) if os.path.exists(model_path) else False
+
+            if not os.path.exists(model_path) or not vocab_exists or not model_exists:
+                print(f"⚠️ Local model path '{model_path}' is missing or incomplete. Falling back to Hugging Face model 'facebook/wav2vec2-base-960h'...")
+                model_path = "facebook/wav2vec2-base-960h"
 
             self.processor = Wav2Vec2Processor.from_pretrained(model_path)
             self.model = Wav2Vec2ForCTC.from_pretrained(model_path)
@@ -33,6 +38,11 @@ class Transcriber:
         try:
             # 1. Load Audio (using soundfile to avoid torchcodec dependency)
             audio_np, sample_rate = sf.read(audio_path)
+
+            # Avoid crashes on extremely short segments (Wav2Vec2 needs at least 320 samples at 16kHz)
+            duration_sec = len(audio_np) / sample_rate
+            if duration_sec < 0.1:
+                return ""
 
             # Convert to float32 numpy if needed
             audio_np = audio_np.astype(np.float32)
