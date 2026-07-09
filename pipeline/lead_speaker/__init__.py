@@ -102,25 +102,184 @@ class LeadSpeakerIdentifier(ABC):
 
 
 # ---------------------------------------------------------------------------
-# Stub implementation — ships with the repo, works out of the box
+# Role-Based Leader Resolution Engine
 # ---------------------------------------------------------------------------
 
-class StubLeadSpeakerIdentifier(LeadSpeakerIdentifier):
+class RoleBasedLeadSpeakerIdentifier(LeadSpeakerIdentifier):
     """
-    Baseline heuristic: the speaker with the most total speaking time is
-    declared the lead.
+    Intelligent Leader Resolution Engine.
+    Operates strictly post-inference on canonical final role predictions.
+    Resolves meeting-level ambiguity deterministically.
+    """
 
-    This is intentionally simple so the pipeline has a working value in
-    ``job.lead_speaker`` from day one.  Replace with a trained model when
-    ready — the interface does not change.
-    """
+    def __init__(self, probability_tolerance: float = 0.05):
+        """
+        Initialize the resolver with a configurable probability tolerance.
+
+        Parameters
+        ----------
+        probability_tolerance : float, optional
+            Tolerance within which two leader probabilities are considered effectively tied.
+            Default is 0.05 (5%).
+        """
+        self.probability_tolerance = probability_tolerance
 
     def identify(self, job: "JobResult") -> Optional[str]:
         talk_times = job.speaker_talk_times()
         if not talk_times:
+            # Set resolution metadata for empty case
+            job.metadata["leader_resolution"] = {
+                "required": False,
+                "candidate_count": 0,
+                "candidate_speakers": [],
+                "selected": None,
+                "method": "none",
+                "reason": "No speaking duration or segments found. No leader selected."
+            }
             return None
-        lead = max(talk_times, key=lambda s: talk_times[s])
-        return lead
+
+        speakers = list(talk_times.keys())
+        if len(speakers) == 1:
+            job.metadata["leader_resolution"] = {
+                "required": False,
+                "candidate_count": 1,
+                "candidate_speakers": speakers,
+                "selected": speakers[0],
+                "method": "exact_match",
+                "reason": f"Only one speaker ({speakers[0]}) is present in the meeting. No resolution required."
+            }
+            return speakers[0]
+
+        # Fetch finalized role predictions
+        roles_info = getattr(job, "speaker_roles", {}) or {}
+
+        # 1. Filter candidates whose final role is "Leader"
+        leader_candidates = []
+        for spk in speakers:
+            r_info = roles_info.get(spk, {})
+            # Normalized roles: Leader, HR, Junior, Other
+            if r_info.get("final_role") == "Leader" or r_info.get("role") == "Leader":
+                leader_candidates.append(spk)
+
+        # Helper to extract Leader probability
+        def get_leader_prob(spk):
+            r_info = roles_info.get(spk, {})
+            probs = r_info.get("probs", {}) or {}
+            # Probability of "Leader" role. Fallback to probability if distribution missing.
+            prob = probs.get("Leader", probs.get("manager", probs.get("Lead", 0.0)))
+            if prob == 0.0:
+                prob = r_info.get("probability", 0.0)
+            return float(prob)
+
+        # Case A: Exactly One Leader
+        if len(leader_candidates) == 1:
+            selected_leader = leader_candidates[0]
+            job.metadata["leader_resolution"] = {
+                "required": False,
+                "candidate_count": 1,
+                "candidate_speakers": leader_candidates,
+                "selected": selected_leader,
+                "method": "exact_match",
+                "reason": f"Exactly one speaker was predicted as Leader ({selected_leader}). No resolution required."
+            }
+            return selected_leader
+
+        # Case B: Multiple Leaders or Case C: No Leaders
+        is_no_leader = len(leader_candidates) == 0
+        candidates = speakers if is_no_leader else leader_candidates
+        candidate_count = len(candidates)
+
+        # Sort candidates by Leader probability descending
+        candidates_with_probs = [(spk, get_leader_prob(spk)) for spk in candidates]
+        candidates_with_probs.sort(key=lambda x: x[1], reverse=True)
+
+        top_spk, top_prob = candidates_with_probs[0]
+
+        if len(candidates_with_probs) == 1:
+            selected_leader = top_spk
+            job.metadata["leader_resolution"] = {
+                "required": not is_no_leader,
+                "candidate_count": candidate_count,
+                "candidate_speakers": candidates,
+                "selected": selected_leader,
+                "method": "probability_margin",
+                "reason": f"Only one candidate resolved. Selected {top_spk}."
+            }
+            return selected_leader
+
+        runner_up_spk, runner_up_prob = candidates_with_probs[1]
+
+        # Rule 1: Probability Margin Check
+        if abs(top_prob - runner_up_prob) > self.probability_tolerance:
+            selected_leader = top_spk
+            reason = (
+                "Selected speaker with the highest Leader probability margin: "
+                f"{top_spk} ({top_prob * 100:.1f}%) vs {runner_up_spk} ({runner_up_prob * 100:.1f}%)."
+            )
+            job.metadata["leader_resolution"] = {
+                "required": not is_no_leader,
+                "candidate_count": candidate_count,
+                "candidate_speakers": candidates,
+                "selected": selected_leader,
+                "method": "probability_margin",
+                "reason": reason
+            }
+            return selected_leader
+
+        # Find all candidates tied within probability_tolerance of the top probability
+        tied_candidates = [spk for spk, prob in candidates_with_probs if abs(top_prob - prob) <= self.probability_tolerance]
+
+        # Rule 2: Conversation Structure Check
+        if job.segments:
+            first_spk = job.segments[0].speaker
+            last_spk = job.segments[-1].speaker
+            second_spk = job.segments[1].speaker if len(job.segments) > 1 else None
+            second_last_spk = job.segments[-2].speaker if len(job.segments) > 1 else None
+
+            for check_spk in [first_spk, last_spk, second_spk, second_last_spk]:
+                if check_spk in tied_candidates:
+                    selected_leader = check_spk
+                    reason = (
+                        f"Leader probabilities were within tolerance ({self.probability_tolerance * 100:.1f}%). "
+                        f"Conversation structure selected {check_spk} based on turn sequence."
+                    )
+                    job.metadata["leader_resolution"] = {
+                        "required": not is_no_leader,
+                        "candidate_count": candidate_count,
+                        "candidate_speakers": candidates,
+                        "selected": selected_leader,
+                        "method": "conversation_structure",
+                        "reason": reason
+                    }
+                    return selected_leader
+
+        # Rule 3: Speaking Duration (Last Resort Fallback)
+        selected_leader = max(tied_candidates, key=lambda s: talk_times.get(s, 0.0))
+        reason = (
+            f"Leader probabilities and conversation structure were tied. "
+            f"Speaking duration fallback selected {selected_leader} ({talk_times.get(selected_leader, 0.0):.1f}s)."
+        )
+        job.metadata["leader_resolution"] = {
+            "required": not is_no_leader,
+            "candidate_count": candidate_count,
+            "candidate_speakers": candidates,
+            "selected": selected_leader,
+            "method": "speaking_duration",
+            "reason": reason
+        }
+        return selected_leader
+
+
+# ---------------------------------------------------------------------------
+# Stub implementation — inherited for backward compatibility
+# ---------------------------------------------------------------------------
+
+class StubLeadSpeakerIdentifier(RoleBasedLeadSpeakerIdentifier):
+    """
+    Subclass of RoleBasedLeadSpeakerIdentifier for compatibility.
+    """
+    def __init__(self, probability_tolerance: float = 0.05):
+        super().__init__(probability_tolerance=probability_tolerance)
 
 
 # ---------------------------------------------------------------------------
@@ -129,5 +288,6 @@ class StubLeadSpeakerIdentifier(LeadSpeakerIdentifier):
 
 __all__ = [
     "LeadSpeakerIdentifier",
+    "RoleBasedLeadSpeakerIdentifier",
     "StubLeadSpeakerIdentifier",
 ]
