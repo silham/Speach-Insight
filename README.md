@@ -59,8 +59,44 @@ AI-powered speech analysis pipeline that transcribes audio/video, identifies spe
 
 - Python ≥ 3.10
 - Node.js ≥ 18
-- FFmpeg installed and on `$PATH`
+- **FFmpeg** installed and accessible on your system `$PATH` (see below for installation instructions)
 - A Hugging Face account with access to [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) (requires accepting the model licence)
+
+### Supported Media Formats
+
+The application standardizes all uploaded media files to a uniform audio format (**16kHz, mono, PCM WAV**) using FFmpeg before any AI processing begins. This ensures consistent behavior across different platforms and eliminates issues with native operating system codec limitations.
+
+*   **Supported Audio Formats**: `wav`, `mp3`, `flac`, `m4a`, `aac`, `ogg`, `opus`
+*   **Supported Video Formats**: `mp4`, `mov`, `mkv`, `avi`, `webm`, `mpeg`, `mpg`
+
+### Install FFmpeg
+
+FFmpeg must be installed and added to your system's `PATH`.
+
+#### macOS
+Install via [Homebrew](https://brew.sh/):
+```bash
+brew install ffmpeg
+```
+
+#### Windows
+Install via [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/):
+```cmd
+winget install ffmpeg
+```
+Alternatively, download from the [FFmpeg official website](https://ffmpeg.org/download.html), extract the binaries, and add the `bin` folder path to your system's environment variables.
+
+#### Linux
+Install via your package manager:
+```bash
+# Ubuntu / Debian
+sudo apt update && sudo apt install ffmpeg
+
+# Fedora / CentOS / RHEL
+sudo dnf install ffmpeg
+```
+
+Verify that it is installed correctly by running `ffmpeg -version` in your terminal.
 
 ---
 

@@ -1,37 +1,153 @@
 import os
+import re
+import shutil
 import subprocess
 
 import librosa
 import soundfile as sf
 
-def convert_video_to_audio(input_path):
+# Supported formats lists
+SUPPORTED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".flac", ".m4a", ".aac", ".ogg", ".opus"}
+SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".mpeg", ".mpg"}
+SUPPORTED_EXTENSIONS = SUPPORTED_AUDIO_EXTENSIONS.union(SUPPORTED_VIDEO_EXTENSIONS)
+
+SUPPORTED_MIME_TYPES = {
+    # Video MIME types
+    "video/mp4",
+    "video/quicktime",
+    "video/x-matroska",
+    "video/mkv",
+    "video/webm",
+    "video/x-msvideo",
+    "video/avi",
+    "video/mpeg",
+    "video/mpg",
+    # Audio MIME types
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/flac",
+    "audio/x-flac",
+    "audio/mp4",
+    "audio/m4a",
+    "audio/x-m4a",
+    "audio/aac",
+    "audio/x-aac",
+    "audio/ogg",
+    "audio/x-ogg",
+    "audio/opus",
+    "audio/x-opus"
+}
+
+
+def check_ffmpeg_installed() -> None:
     """
-    Convert video files to WAV audio (16kHz mono).
-    If the file is already audio, return it unchanged.
+    Verify that FFmpeg is installed and executable.
+    Raises RuntimeError if FFmpeg is missing or fails to execute.
     """
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError(
+            "FFmpeg is not installed or cannot be found in the system PATH. "
+            "Please install FFmpeg and verify it is added to your PATH environment variable."
+        )
+    try:
+        # Run a simple version command to confirm it executes correctly
+        subprocess.run(["ffmpeg", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    except Exception as e:
+        raise RuntimeError(
+            f"FFmpeg is present in PATH, but executing it failed: {e}. "
+            "Please check your FFmpeg installation."
+        )
+
+
+def validate_media_file(filename: str, content_type: str | None = None) -> None:
+    """
+    Validate that the file's extension and MIME type are supported by the system.
+    Raises ValueError if unsupported.
+    """
+    _, ext = os.path.splitext(filename)
+    ext = ext.lower()
+
+    if ext not in SUPPORTED_EXTENSIONS:
+        supported_list = sorted(list(SUPPORTED_EXTENSIONS))
+        raise ValueError(
+            f"Unsupported file extension '{ext}'. "
+            f"Supported formats: {', '.join(supported_list)}."
+        )
+
+    # Validate MIME type if it is provided and is not generic application/octet-stream
+    if content_type and content_type != "application/octet-stream":
+        if content_type not in SUPPORTED_MIME_TYPES and not content_type.startswith(("audio/", "video/")):
+            raise ValueError(
+                f"Unsupported MIME type '{content_type}'. "
+                "Please upload a valid audio or video file."
+            )
+
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize the filename by removing path traversal components
+    and replacing unsafe characters for cross-platform compatibility.
+    """
+    base_name = os.path.basename(filename)
+    name, ext = os.path.splitext(base_name)
+    
+    # Replace non-alphanumeric, dot, underscore, and hyphen with underscore
+    sanitized_name = re.sub(r'[^a-zA-Z0-9._-]', '_', name)
+    sanitized_ext = re.sub(r'[^a-zA-Z0-9.]', '', ext).lower()
+    
+    sanitized = sanitized_name + sanitized_ext
+    
+    # If the name becomes empty or starts with a dot, prepend a generic string
+    if not sanitized_name or sanitized.startswith('.'):
+        sanitized = "upload_" + sanitized
+        
+    return sanitized
+
+
+def convert_media_to_wav(input_path: str) -> str:
+    """
+    Convert any supported audio or video file to a standard PCM WAV file (16kHz, mono).
+    Always generates a new WAV path and returns it.
+    """
+    check_ffmpeg_installed()
 
     base, ext = os.path.splitext(input_path)
+    
+    # Define a dedicated output path for the converted file
+    output_wav = base + "_processed.wav"
 
-    video_extensions = [".mp4", ".mov", ".mkv", ".avi", ".webm"]
-
-    if ext.lower() not in video_extensions:
-        return input_path  # already audio
-
-    output_audio = base + ".wav"
-
+    # FFmpeg command to convert to 16kHz mono WAV (PCM s16le)
     command = [
         "ffmpeg",
         "-i", input_path,
-        "-ac", "1",        # mono audio
-        "-ar", "16000",    # 16kHz sample rate
-        "-vn",             # remove video
-        "-y",
-        output_audio
+        "-ac", "1",          # mono audio
+        "-ar", "16000",      # 16kHz sample rate
+        "-vn",               # remove video track
+        "-y",                # overwrite output if exists
+        output_wav
     ]
 
-    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        # Run conversion, capture stderr for meaningful error logging
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            error_msg = result.stderr.strip()
+            raise RuntimeError(
+                f"FFmpeg conversion failed (exit code {result.returncode}): {error_msg}"
+            )
+    except Exception as e:
+        if isinstance(e, RuntimeError):
+            raise e
+        raise RuntimeError(f"Failed to execute FFmpeg command: {e}")
 
-    return output_audio
+    # Check that output file was actually created and is not empty
+    if not os.path.exists(output_wav) or os.path.getsize(output_wav) == 0:
+        raise RuntimeError("FFmpeg completed but did not produce a valid WAV output file.")
+
+    return output_wav
 
 
 def slice_audio(input_path: str, output_path: str, start_ratio: float, end_ratio: float) -> None:

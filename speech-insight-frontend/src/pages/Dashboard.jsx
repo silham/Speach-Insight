@@ -350,24 +350,24 @@ export const Dashboard = () => {
                       <line x1="12" x2="12" y1="3" y2="15"></line>
                     </svg>
                   </div>
-                  <h3>Speech Audio Upload</h3>
-                  <p>Provide a call recording or meeting audio file (WAV/MP3). The engine will diarize, transcribe, and audit compliance guidelines.</p>
-
-                  <div className="upload-controls">
-                    <label className="file-select-label">
-                      Choose Audio File
-                      <input type="file" className="file-raw-input" accept="audio/*" onChange={handleFileChange} />
-                    </label>
-                    {file && <span className="selected-filename">{file.name}</span>}
-                  </div>
-
-                  <button
-                    className="btn-primary"
-                    disabled={!file || loading}
-                    onClick={handleUpload}
-                  >
-                    {loading ? "Processing..." : "Analyze Audio"}
-                  </button>
+                   <h3>Speech Media Upload</h3>
+                   <p>Provide a meeting audio or video file (WAV, MP3, FLAC, M4A, AAC, OGG, OPUS, MP4, MOV, MKV, AVI, WebM, MPEG, MPG). The engine will process, diarize, transcribe, and audit compliance guidelines.</p>
+ 
+                   <div className="upload-controls">
+                     <label className="file-select-label">
+                       Choose Media File
+                       <input type="file" className="file-raw-input" accept="audio/*,video/*,.wav,.mp3,.flac,.m4a,.aac,.ogg,.opus,.mp4,.mov,.mkv,.avi,.webm,.mpeg,.mpg" onChange={handleFileChange} />
+                     </label>
+                     {file && <span className="selected-filename">{file.name}</span>}
+                   </div>
+ 
+                   <button
+                     className="btn-primary"
+                     disabled={!file || loading}
+                     onClick={handleUpload}
+                   >
+                     {loading ? "Processing..." : "Analyze Media"}
+                   </button>
 
                   {status && (
                     <p style={{ marginTop: '1.25rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>

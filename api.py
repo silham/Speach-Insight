@@ -20,7 +20,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import shutil
 import os
-from media_utils import convert_video_to_audio
+from media_utils import (
+    convert_media_to_wav,
+    validate_media_file,
+    sanitize_filename,
+    check_ffmpeg_installed
+)
 import uuid
 import json
 
@@ -37,6 +42,13 @@ PROCESSED_DIR = "processed"
 
 for folder in [UPLOAD_DIR, PROCESSED_DIR]:
     os.makedirs(folder, exist_ok=True)
+
+# Verify FFmpeg is installed at startup
+try:
+    check_ffmpeg_installed()
+    print("✅ FFmpeg check passed.")
+except Exception as e:
+    print(f"⚠️ FFmpeg check failed at startup: {e}")
 
 load_dotenv()
 app = FastAPI()
@@ -78,25 +90,65 @@ def home():
 
 @app.post("/analyze")
 async def analyze_audio(file: UploadFile = File(...)):
-    # ── 1. Save uploaded file ──────────────────────────────────────────
+    # ── 1. Validate & Save uploaded file ───────────────────────────────
+    try:
+        validate_media_file(file.filename, file.content_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     file_id = str(uuid.uuid4())[:8]
-    filename = f"{file_id}_{file.filename}"
+    safe_filename = sanitize_filename(file.filename)
+    filename = f"{file_id}_{safe_filename}"
     file_path = os.path.join(UPLOAD_DIR, filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {e}")
 
     print(f"Processing: {filename}")
 
-    # ── 2. Convert video → audio if needed ────────────────────────────
-    audio_path = convert_video_to_audio(file_path)
+    # ── 2. Convert media to WAV ──────────────────────────────────────
+    try:
+        audio_path = convert_media_to_wav(file_path)
+    except (ValueError, RuntimeError) as e:
+        # Clean up uploaded file on validation or conversion failure
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # Clean up uploaded file on validation or conversion failure
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail=f"Unexpected error during media conversion: {e}")
 
     # ── 3. Run full analysis pipeline ─────────────────────────────────
-    job = pipeline.run(
-        audio_path=audio_path,
-        job_id=file_id,
-        processed_dir=PROCESSED_DIR,
-    )
+    try:
+        job = pipeline.run(
+            audio_path=audio_path,
+            job_id=file_id,
+            processed_dir=PROCESSED_DIR,
+        )
+    except Exception as e:
+        # Clean up files on pipeline failure
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        if 'audio_path' in locals() and os.path.exists(audio_path):
+            try:
+                os.remove(audio_path)
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {e}")
 
     if not job.segments:
         raise HTTPException(status_code=400, detail="No speech detected")
