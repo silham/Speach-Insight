@@ -1,36 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
+/* ══ DARK THEME (default) ════════════════════════════════════════════════ */
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.6;
   font-weight: 400;
 
-  /* Premium Dark Glass Theme Colors */
-  --bg-app: #05050A; /* Extremely dark, almost black base */
-  --bg-card: rgba(20, 20, 30, 0.45); /* High transparency for glass */
+  /* Backgrounds */
+  --bg-app: #05050A;
+  --bg-card: rgba(20, 20, 30, 0.45);
   --bg-card-hover: rgba(30, 30, 45, 0.6);
   --border-color: rgba(255, 255, 255, 0.06);
   --border-hover: rgba(255, 255, 255, 0.12);
-  
-  /* Text Colors */
+
+  /* Text */
   --text-main: #FFFFFF;
   --text-muted: #A1A1AA;
   --text-secondary: #D4D4D8;
   --text-light: #71717A;
 
-  /* Vibrant Neon Accents */
-  --accent: #00F0FF; /* Cyber Cyan */
+  /* Accent — Cyber Cyan */
+  --accent: #00F0FF;
   --accent-light: rgba(0, 240, 255, 0.15);
   --accent-glow: rgba(0, 240, 255, 0.4);
-  
-  --success: #00FF9D; /* Emerald/Neon Green */
+
+  /* Semantic */
+  --success: #00FF9D;
   --success-light: rgba(0, 255, 157, 0.15);
-  --warning: #FFE600; /* Neon Yellow */
+  --warning: #FFE600;
   --warning-light: rgba(255, 230, 0, 0.15);
-  --danger: #FF0055; /* Hot Pink/Red */
+  --danger: #FF0055;
   --danger-light: rgba(255, 0, 85, 0.15);
-  
-  /* Secondary Accents */
+
+  /* Secondary accents */
   --purple: #B026FF;
   --purple-light: rgba(176, 38, 255, 0.15);
   --orange: #FF6600;
@@ -41,18 +43,104 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-full: 9999px;
-  
   --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px var(--accent-glow);
   --blur-glass: 24px;
 
+  /* Surface / input tints (dark defaults) */
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-bg-focus: rgba(20, 20, 30, 0.8);
+  --track-bg: rgba(255, 255, 255, 0.05);
+  --bubble-bg: rgba(20, 20, 30, 0.30);
+  --bubble-bg-hover: rgba(20, 20, 30, 0.55);
+  --nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --accordion-hover-bg: rgba(255, 255, 255, 0.08);
+  --eval-hover-bg: rgba(255, 255, 255, 0.03);
+  --rag-dropzone-bg: rgba(255, 255, 255, 0.03);
+  --segment-comment-bg: rgba(255, 255, 255, 0.05);
+  --sidebar-shadow: 5px 0 30px rgba(0, 0, 0, 0.4);
+  --card-hover-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  --scrollbar-track: rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
+  --btn-default-bg: rgba(255, 255, 255, 0.03);
+  --btn-hover-bg: rgba(255, 255, 255, 0.08);
+
   color: var(--text-main);
   background-color: var(--bg-app);
-  
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ══ LIGHT THEME OVERRIDES ═══════════════════════════════════════════════ */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-app: #F0F2F8;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-card-hover: rgba(255, 255, 255, 1);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.16);
+
+  /* Text */
+  --text-main: #1a1a2e;
+  --text-muted: #4a4a6a;
+  --text-secondary: #3a3a5a;
+  --text-light: #8888aa;
+
+  /* Accent — Indigo */
+  --accent: #4f46e5;
+  --accent-light: rgba(79, 70, 229, 0.10);
+  --accent-glow: rgba(79, 70, 229, 0.22);
+
+  /* Semantic */
+  --success: #059669;
+  --success-light: rgba(5, 150, 105, 0.10);
+  --warning: #d97706;
+  --warning-light: rgba(217, 119, 6, 0.10);
+  --danger: #dc2626;
+  --danger-light: rgba(220, 38, 38, 0.10);
+
+  --purple: #7c3aed;
+  --purple-light: rgba(124, 58, 237, 0.10);
+  --orange: #ea580c;
+  --orange-light: rgba(234, 88, 12, 0.10);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.14);
+  --shadow-glow: 0 0 16px var(--accent-glow);
+
+  /* Surface / input tints (light overrides) */
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --input-bg-focus: #ffffff;
+  --track-bg: rgba(0, 0, 0, 0.06);
+  --bubble-bg: rgba(255, 255, 255, 0.75);
+  --bubble-bg-hover: rgba(255, 255, 255, 0.98);
+  --nav-hover-bg: rgba(79, 70, 229, 0.06);
+  --accordion-hover-bg: rgba(0, 0, 0, 0.04);
+  --eval-hover-bg: rgba(79, 70, 229, 0.04);
+  --rag-dropzone-bg: rgba(79, 70, 229, 0.03);
+  --segment-comment-bg: rgba(79, 70, 229, 0.04);
+  --sidebar-shadow: 2px 0 20px rgba(0, 0, 0, 0.07);
+  --card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
+  --scrollbar-track: rgba(0, 0, 0, 0.05);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.14);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.24);
+  --btn-default-bg: rgba(0, 0, 0, 0.03);
+  --btn-hover-bg: rgba(79, 70, 229, 0.07);
+
+  color: var(--text-main);
+  background-color: var(--bg-app);
+}
+
+/* Light mode body gradient */
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(124, 58, 237, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 85% 90%, rgba(79, 70, 229, 0.03) 0%, transparent 40%);
 }
 
 * {
@@ -72,23 +160,14 @@ body {
   background-attachment: fixed;
   color: var(--text-main);
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom Scrollbar for sleek UI */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 /* Global Typography */
 h1, h2, h3, h4, h5, h6 {
@@ -112,7 +191,8 @@ a {
 }
 
 a:hover {
-  color: #80F8FF;
+  color: var(--accent);
+  filter: brightness(1.2);
   text-shadow: 0 0 10px var(--accent-glow);
 }
 
@@ -124,7 +204,7 @@ button {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   padding: 0.75em 1.5em;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--btn-default-bg);
   backdrop-filter: blur(var(--blur-glass));
   -webkit-backdrop-filter: blur(var(--blur-glass));
   color: var(--text-main);
@@ -134,8 +214,8 @@ button {
 }
 
 button:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-hover);
+  background: var(--btn-hover-bg);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }

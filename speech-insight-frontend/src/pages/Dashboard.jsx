@@ -15,6 +15,20 @@ import { Clock, MessageSquare, Users, Target, AlertTriangle, Search } from 'luci
 export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('pipeline');
 
+  // Theme state — persisted in localStorage
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('si-theme');
+    return saved !== null ? saved === 'dark' : true;
+  });
+
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      localStorage.setItem('si-theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
+
   // Pipeline execution state
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -255,7 +269,7 @@ export const Dashboard = () => {
   }, [compositionStats]);
 
   return (
-    <div className="saas-layout">
+    <div className="saas-layout" data-theme={isDark ? 'dark' : 'light'}>
       {/* 1. Sidebar Navigation */}
       <aside className="sidebar-nav">
         <div className="sidebar-brand">
@@ -270,6 +284,32 @@ export const Dashboard = () => {
             <h3>SpeechInSight</h3>
             <span>Analytics Engine</span>
           </div>
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{ marginLeft: 'auto' }}
+          >
+            {isDark ? (
+              /* Sun icon — click to go light */
+              <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              /* Moon icon — click to go dark */
+              <svg className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
         </div>
 
         <nav className="nav-menu">
@@ -775,26 +815,66 @@ export const Dashboard = () => {
         )}
 
         {activeTab === 'report' && report && (
-          <div className="card-panel" style={{ maxWidth: '900px' }}>
-            <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Guidelines Scorecard Summary</h4>
-            <EvaluationSummary
-              totalScore={report.total_score}
-              vibeStats={emotionVibeStats}
-              strengths={report.strengths}
-              improvements={report.improvements}
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '900px' }}>
+            <div className="card-panel">
+              <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Guidelines Scorecard Summary</h4>
+              <EvaluationSummary
+                totalScore={report.total_score}
+                vibeStats={emotionVibeStats}
+                strengths={report.strengths}
+                improvements={report.improvements}
+              />
 
-            <div className="report-categories-list" style={{ marginTop: '1rem' }}>
-              {report.categories && report.categories.map((cat, idx) => (
-                <EvaluationAccordion
-                  key={idx}
-                  cat={cat}
-                  results={results}
-                  isExpanded={expandedCategory === cat.name}
-                  onToggle={() => setExpandedCategory(expandedCategory === cat.name ? null : cat.name)}
-                />
-              ))}
+              <div className="report-categories-list" style={{ marginTop: '1rem' }}>
+                {report.categories && report.categories.map((cat, idx) => (
+                  <EvaluationAccordion
+                    key={idx}
+                    cat={cat}
+                    results={results}
+                    isExpanded={expandedCategory === cat.name}
+                    onToggle={() => setExpandedCategory(expandedCategory === cat.name ? null : cat.name)}
+                  />
+                ))}
+              </div>
             </div>
+
+            {/* ── Audio Segment Feedback ── */}
+            {report.segment_comments && report.segment_comments.length > 0 && (
+              <div className="card-panel segment-feedback-section">
+                <h4 className="segment-feedback-title" style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Audio Segment Feedback</h4>
+                <div className="segment-feedback-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {report.segment_comments.map((seg, i) => {
+                    const transcriptRow = results.find(r => r.segment_id === seg.segment_id);
+                    return (
+                      <div key={i} className="segment-comment-card">
+                        <div className="segment-comment-header">
+                          <h5 className="segment-comment-title">
+                            {seg.segment_id != null
+                              ? `Segment ${seg.segment_id}${transcriptRow ? ` — ${transcriptRow.speaker}` : ''}`
+                              : (seg.comment.match(/^(SPEAKER_\d+)/) ? seg.comment.match(/^(SPEAKER_\d+)/)[1] : `Segment ${i + 1}`)}
+                          </h5>
+                          {transcriptRow && (
+                            <button
+                              className="segment-comment-link"
+                              onClick={() => {
+                                setActiveTab('pipeline');
+                                jumpToSegment(seg.segment_id);
+                              }}
+                            >
+                              View in Dialogue Browser
+                            </button>
+                          )}
+                        </div>
+                        {transcriptRow && (
+                          <p className="segment-comment-quote">"{transcriptRow.text}"</p>
+                        )}
+                        <p className="segment-comment-text">{seg.comment}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

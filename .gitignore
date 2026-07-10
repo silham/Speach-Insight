@@ -5,10 +5,8 @@ __pycache__/
 *.pyd
 .venv/
 
-# Model / large files
-final_model/*.safetensors
-final_model/training_args.bin
-final_model/vocab.json
+# Model / large files — entire directory excluded (hosted separately)
+final_model/
 
 # Emotion model cache (downloaded at runtime — do not commit)
 emotion/models/
