@@ -46,3 +46,16 @@ Template_classifier_model/
 
 # Speaker role classification models
 pipeline/role_classification/models/
+pipeline/role_classification/models/
+# Local role classification model artifacts
+pipeline/role_classification/speacker_role_classifciation_model/
+pipeline/role_classification/*.zip
+
+
+# Temporary testing
+scratch/
+test_assets/
+
+# Python
+__pycache__/
+*.pyc
