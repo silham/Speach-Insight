@@ -44,6 +44,7 @@ from nltk.tokenize import sent_tokenize
 
 from .schemas import JobResult, SegmentMeta, SegmentResult
 from .scoring import generate_score_and_evidence
+from .role_classification.predictor import predict_role, get_router, get_extractor
 
 if TYPE_CHECKING:
     # Avoid circular imports — only used for type hints
@@ -87,6 +88,15 @@ class AnalysisPipeline:
         self.template_classifier = template_classifier
         self.lead_speaker = lead_speaker
         self.audio_base_url = audio_base_url
+
+        # Load Speaker Role Classifier once during pipeline initialization
+        try:
+            print("🚀 Loading Speaker Role Classifier during pipeline initialization...")
+            get_router()
+            get_extractor()
+            print("✅ Speaker Role Classifier loaded.")
+        except Exception as exc:
+            print(f"⚠️ Failed to load Speaker Role Classifier: {exc}")
 
     # ------------------------------------------------------------------
     # Semantic splitting helper
@@ -326,6 +336,26 @@ class AnalysisPipeline:
                 print("📋 All segments already labelled by semantic splitting — skipping Stage 4.")
             print("✅ Template classification complete.")
 
+        # ── Stage 4.5: Speaker Role Classification ──────────────────────
+        print("👤 Classifying speaker roles...")
+        try:
+            role_segments = [
+                {"speaker_id": seg.speaker, "text": seg.text}
+                for seg in job.segments
+            ]
+            role_results = predict_role(role_segments)
+            job.speaker_roles = role_results
+            for seg in job.segments:
+                if seg.speaker in role_results:
+                    res = role_results[seg.speaker]
+                    seg.role = res.get("role", "unknown")
+                    seg.role_confidence = res.get("probability", 0.0)
+                    seg.role_probability_distribution = res.get("probs", {})
+                    seg.role_evidence = res.get("evidence", [])
+            print("✅ Speaker role classification complete.")
+        except Exception as exc:
+            print(f"⚠️ Speaker role classification failed: {exc}")
+
         # ── Stage 5: Lead Speaker Identification ────────────────────────
         if self.lead_speaker is not None:
             print("👤 Identifying lead speaker…")
@@ -358,6 +388,15 @@ class AnalysisPipeline:
             print(f"💾 Transcript saved to {transcript_path}")
         except Exception as exc:
             print(f"⚠️  Failed to save transcript JSON: {exc}")
+
+        # ── Save completed JobResult for report statistics ───────────────
+        try:
+            job_result_path = os.path.join(job_output_folder, "job_result.json")
+            with open(job_result_path, "w", encoding="utf-8") as f:
+                json.dump(job.to_dict(), f, indent=4, ensure_ascii=False)
+            print(f"💾 JobResult saved to {job_result_path}")
+        except Exception as exc:
+            print(f"⚠️  Failed to save JobResult JSON: {exc}")
 
         # ── Generate Score and Evidence ──────────────────────────────────
         try:
