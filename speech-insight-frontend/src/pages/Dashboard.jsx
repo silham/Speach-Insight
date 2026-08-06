@@ -45,6 +45,8 @@ export const Dashboard = () => {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [rightPanelTab, setRightPanelTab] = useState('report');
   const [devMode, setDevMode] = useState(false);
+  const [isSpeakerProfilesOpen, setIsSpeakerProfilesOpen] = useState(true);
+  const [isTranscriptsOpen, setIsTranscriptsOpen] = useState(true);
 
   const audioInstanceRef = useRef(null);
 
@@ -460,8 +462,58 @@ export const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* ─── HIGHLIGHTED GUIDELINE SCORES ─── */}
+                <div className="guideline-scores-highlight" style={{ marginTop: '1.25rem', padding: '1.5rem', backgroundColor: 'var(--panel-bg)', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <div className="section-header" style={{ marginBottom: '1.25rem' }}>
+                    <div className="header-text-group">
+                      <h4 style={{ fontSize: '1.1rem', color: 'var(--text-main)', fontWeight: 700 }}>Guideline Scores</h4>
+                      <span className="section-subtitle">Overall compliance evaluation based on your RAG base.</span>
+                    </div>
+                  </div>
+                  {report ? (
+                    <div className="report-tab-layout">
+                      <EvaluationSummary
+                        totalScore={report.total_score}
+                        vibeStats={emotionVibeStats}
+                        strengths={report.strengths}
+                        improvements={report.improvements}
+                      />
+                      <div className="report-categories-list" style={{ marginTop: '0.75rem' }}>
+                        {report.categories && report.categories.map((cat, idx) => (
+                          <EvaluationAccordion
+                            key={idx}
+                            cat={cat}
+                            results={results}
+                            isExpanded={expandedCategory === cat.name}
+                            onToggle={() => setExpandedCategory(expandedCategory === cat.name ? null : cat.name)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="report-empty-state">
+                      <span className="placeholder-icon"><AlertTriangle size={28} /></span>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>Compliance report not loaded. Ensure Google API Key is set in your environment if using RAG evaluation modules.</p>
+                    </div>
+                  )}
+                </div>
+
                 {/* ─── Speaker Profiles — Horizontal Table ─── */}
-                <section className="speaker-analysis-container">
+                <div className="accordion-container" style={{ marginTop: '1.25rem', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', overflow: 'hidden' }}>
+                  <div 
+                    className="accordion-header" 
+                    onClick={() => setIsSpeakerProfilesOpen(!isSpeakerProfilesOpen)}
+                    style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <Users size={18} />
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Speaker Profiles</h4>
+                    </div>
+                    <span>{isSpeakerProfilesOpen ? "▼" : "▶"}</span>
+                  </div>
+                  {isSpeakerProfilesOpen && (
+                    <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                      <section className="speaker-analysis-container">
                   <div className="section-header">
                     <div className="header-text-group">
                       <h4>Speaker Profiles</h4>
@@ -493,6 +545,9 @@ export const Dashboard = () => {
                     ))}
                   </div>
                 </section>
+                    </div>
+                  )}
+                </div>
 
                 {/* ─── Meeting-Level Leader Resolution Section ─── */}
                 {devMode && report && report.leader_resolution && (
@@ -573,7 +628,21 @@ export const Dashboard = () => {
                 )}
 
                 {/* ─── Workspace / Dialogue Section ─── */}
-                <div className="workspace-split">
+                <div className="accordion-container" style={{ marginTop: '1.25rem', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', overflow: 'hidden' }}>
+                  <div 
+                    className="accordion-header" 
+                    onClick={() => setIsTranscriptsOpen(!isTranscriptsOpen)}
+                    style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <MessageSquare size={18} />
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Dialogue Transcripts & Inspector</h4>
+                    </div>
+                    <span>{isTranscriptsOpen ? "▼" : "▶"}</span>
+                  </div>
+                  {isTranscriptsOpen && (
+                    <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                      <div className="workspace-split">
                   {/* Left Column: Transcript List */}
                   <div className="card-panel chat-stream-card">
                     <div className="transcript-control-header">
@@ -638,53 +707,14 @@ export const Dashboard = () => {
                   {/* Right Column: Inspector Panels */}
                   <div className="card-panel tabs-container">
                     <div className="details-tab-header">
-                      <button
-                        className={`tab-btn-detail ${rightPanelTab === 'report' ? 'active' : ''}`}
-                        onClick={() => setRightPanelTab('report')}
-                      >
-                        Guideline Score
-                      </button>
-                      <button
-                        className={`tab-btn-detail ${rightPanelTab === 'inspector' ? 'active' : ''}`}
-                        onClick={() => setRightPanelTab('inspector')}
-                        disabled={!activeSegment}
-                      >
+                      <button className="tab-btn-detail active">
                         Turn Inspector
                       </button>
                     </div>
 
                     <div className="tab-details-content">
-                      {rightPanelTab === 'report' ? (
-                        report ? (
-                          <div className="report-tab-layout">
-                            <EvaluationSummary
-                              totalScore={report.total_score}
-                              vibeStats={emotionVibeStats}
-                              strengths={report.strengths}
-                              improvements={report.improvements}
-                            />
-
-                            <div className="report-categories-list" style={{ marginTop: '0.75rem' }}>
-                              {report.categories && report.categories.map((cat, idx) => (
-                                <EvaluationAccordion
-                                  key={idx}
-                                  cat={cat}
-                                  results={results}
-                                  isExpanded={expandedCategory === cat.name}
-                                  onToggle={() => setExpandedCategory(expandedCategory === cat.name ? null : cat.name)}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="report-empty-state">
-                            <span className="placeholder-icon"><AlertTriangle size={28} /></span>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>Compliance report not loaded. Ensure Google API Key is set in your environment if using RAG evaluation modules.</p>
-                          </div>
-                        )
-                      ) : (
-                        // Turn Inspector
-                        activeSegment ? (
+                        {/* Turn Inspector */}
+                        {activeSegment ? (
                           <div className="inspector-content">
                             <div className="inspector-meta-row">
                               <span className="inspector-speaker" style={{ color: activeSegmentSpeakerTheme?.text }}>
@@ -804,10 +834,12 @@ export const Dashboard = () => {
                             <span className="placeholder-icon"><Search size={28} /></span>
                             <p>Select any utterance card in the Dialogue Browser to inspect specific acoustic and text parameters.</p>
                           </div>
-                        )
-                      )}
+                        )}
                     </div>
                   </div>
+                </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}

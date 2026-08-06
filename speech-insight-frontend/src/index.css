@@ -238,3 +238,28 @@ button:focus-visible {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
+
+/* Accordion Styles */
+.accordion-header:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+
+[data-theme="light"] .accordion-header:hover {
+  background-color: rgba(0,0,0,0.03) !important;
+}
+
+/* Guideline Highlight */
+.guideline-scores-highlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.guideline-scores-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent);
+}
