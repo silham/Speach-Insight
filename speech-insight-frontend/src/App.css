@@ -2008,3 +2008,313 @@
   flex-direction: column;
   gap: 0.75rem;
 }
+
+/* ══ AUTH: LOGIN SCREEN ══════════════════════════════════════════════════ */
+
+.auth-checking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: var(--text-light);
+  font-size: 0.85rem;
+  background-color: var(--bg-app);
+}
+
+.login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 2rem;
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.login-brand h3 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.login-brand span {
+  font-size: 0.68rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.login-title {
+  margin: 0.35rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-light);
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.login-field span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.login-field input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.86rem;
+  color: var(--text-main);
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background-color: var(--input-bg-focus);
+}
+
+.login-error {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.76rem;
+  color: var(--danger);
+  background-color: var(--danger-light);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+}
+
+.login-card .btn-primary {
+  margin-top: 0.3rem;
+}
+
+/* ══ SIDEBAR: ANALYSIS HISTORY ═══════════════════════════════════════════ */
+
+.sidebar-history {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-color);
+  flex: 1;
+}
+
+.sidebar-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.25rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-light);
+}
+
+.history-count {
+  margin-left: auto;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.65rem;
+  color: var(--accent);
+  background-color: var(--accent-light);
+  border-radius: var(--radius-full);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.history-empty {
+  padding: 0.4rem 0.25rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-light);
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.history-item:hover {
+  background-color: var(--nav-hover-bg);
+}
+
+.history-item.active {
+  background-color: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.history-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.history-filename {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item.active .history-filename {
+  color: var(--accent);
+}
+
+.history-meta {
+  font-size: 0.65rem;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-owner {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  padding: 0.02rem 0.3rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--purple);
+  background-color: var(--purple-light);
+  border-radius: 3px;
+}
+
+.history-delete {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  color: var(--text-light);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.history-item:hover .history-delete {
+  opacity: 1;
+}
+
+.history-delete:hover {
+  color: var(--danger);
+  background-color: var(--danger-light);
+}
+
+/* ══ SIDEBAR: SIGNED-IN USER ═════════════════════════════════════════════ */
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-user-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light);
+}
+
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem;
+  color: var(--text-light);
+  background-color: var(--btn-default-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.sidebar-logout:hover {
+  color: var(--danger);
+  background-color: var(--danger-light);
+  border-color: var(--danger);
+}
+
+/* Sidebar column now ends with history + user footer, so the nav and job
+   badge no longer absorb the leftover vertical space — the history list does. */
+.sidebar-nav .nav-menu {
+  flex: 0 0 auto;
+}
+
+.sidebar-nav .sidebar-job-badge {
+  margin-top: 1rem;
+}
