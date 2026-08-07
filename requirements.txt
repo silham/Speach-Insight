@@ -23,7 +23,10 @@ pandas
 
 # --- Emotion Recognition (Phase 1-6) ---
 vaderSentiment
-scikit-learn
+# Pinned: the role-classifier artifacts in pipeline/role_classification/models
+# are pickled estimators, which warn (and may break) across sklearn versions.
+# Re-save them with the new version if you bump this.
+scikit-learn==1.7.2
 
 # --- RAG (Retrieval-Augmented Generation) ---
 langchain
@@ -38,6 +41,8 @@ docx2txt
 python-dotenv
 
 # --- Speaker Role Classifier Integration ---
+# xgboost needs the OpenMP runtime at import time:
+#   macOS: brew install libomp   |   Debian/Ubuntu: apt install libgomp1
 xgboost
 textblob
 joblib

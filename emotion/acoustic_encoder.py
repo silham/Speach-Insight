@@ -37,15 +37,20 @@ class AcousticEncoder(nn.Module):
         super().__init__()
         from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
 
+        from ._hf_quiet import quiet_hf_load
+
         self.device = device or ("mps" if torch.backends.mps.is_available() else "cpu")
 
         print(f"⏳ Loading Acoustic Encoder ({model_name})...")
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            model_name, cache_dir=_EMOTION_MODELS_DIR
-        )
-        self.encoder = Wav2Vec2Model.from_pretrained(
-            model_name, cache_dir=_EMOTION_MODELS_DIR
-        )
+        # The checkpoint carries an emotion-classification head we don't use;
+        # quiet the resulting "UNEXPECTED key" report.
+        with quiet_hf_load():
+            self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+                model_name, cache_dir=_EMOTION_MODELS_DIR
+            )
+            self.encoder = Wav2Vec2Model.from_pretrained(
+                model_name, cache_dir=_EMOTION_MODELS_DIR
+            )
         self.encoder.eval()
         self.encoder.to(self.device)
         print("✅ Acoustic Encoder loaded.")

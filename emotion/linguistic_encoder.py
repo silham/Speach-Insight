@@ -33,15 +33,20 @@ class LinguisticEncoder(nn.Module):
         super().__init__()
         from transformers import BertModel, BertTokenizer
 
+        from ._hf_quiet import quiet_hf_load
+
         self.device = device or ("mps" if torch.backends.mps.is_available() else "cpu")
 
         print(f"⏳ Loading Linguistic Encoder ({model_name})...")
-        self.tokenizer = BertTokenizer.from_pretrained(
-            model_name, cache_dir=_EMOTION_MODELS_DIR
-        )
-        self.encoder = BertModel.from_pretrained(
-            model_name, cache_dir=_EMOTION_MODELS_DIR
-        )
+        # The checkpoint carries MLM/NSP heads we don't use; quiet the
+        # resulting "UNEXPECTED key" report.
+        with quiet_hf_load():
+            self.tokenizer = BertTokenizer.from_pretrained(
+                model_name, cache_dir=_EMOTION_MODELS_DIR
+            )
+            self.encoder = BertModel.from_pretrained(
+                model_name, cache_dir=_EMOTION_MODELS_DIR
+            )
         self.encoder.eval()
         self.encoder.to(self.device)
         print("✅ Linguistic Encoder loaded.")
