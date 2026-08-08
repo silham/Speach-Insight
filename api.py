@@ -14,10 +14,26 @@ if sys.platform.startswith('win'):
         pass
 
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import OperationalError
+
+from auth import (
+    Analysis,
+    User,
+    create_token,
+    get_current_user,
+    get_db,
+    init_db,
+    require_admin,
+    verify_password,
+    visible_analysis_or_404,
+    write_in_fresh_session,
+)
+import datetime as dt
 import shutil
 import os
 from media_utils import (
@@ -62,6 +78,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Database (users + analysis ownership) ---
+if init_db():
+    print("✅ Database ready.")
+else:
+    print(
+        "⚠️ Starting without a verified database connection. Login, history and "
+        "report endpoints will answer 503 until Postgres is reachable again; "
+        "everything else works as normal."
+    )
+
+
+@app.exception_handler(OperationalError)
+async def database_unavailable(request, exc):
+    """Turn a dropped/refused Postgres connection into a 503, not a 500 trace.
+
+    The frontend can't distinguish a genuine bug from a database blip if both
+    arrive as 500. This handler sits inside the CORS middleware, so the browser
+    still sees the response rather than a CORS failure.
+    """
+    print(f"⚠️ Database unavailable on {request.method} {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database temporarily unavailable — please retry shortly."},
+    )
+
 app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 
 # --- Load AI Models (once at startup) ---
@@ -88,8 +129,92 @@ def home():
     return {"status": "SpeechInSight Backend is Running"}
 
 
+# ── AUTH ─────────────────────────────────────────────────────
+# Login only. Accounts are created with `python seed_users.py`.
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/auth/login")
+def login(payload: LoginRequest, db=Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email.strip().lower()).first()
+
+    # Same message either way so the response can't be used to enumerate emails.
+    if user is None or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    return {"access_token": create_token(user), "user": user.to_dict()}
+
+
+@app.get("/auth/me")
+def me(user: User = Depends(get_current_user)):
+    return user.to_dict()
+
+
+# ── ANALYSIS HISTORY ─────────────────────────────────────────
+
+@app.get("/analyses")
+def list_analyses(user: User = Depends(get_current_user), db=Depends(get_db)):
+    """Analyses the caller may see: their own, or everything for an admin."""
+    q = db.query(Analysis, User.name).join(User, Analysis.owner_id == User.id)
+    if not user.is_admin:
+        q = q.filter(Analysis.owner_id == user.id)
+
+    rows = q.order_by(Analysis.created_at.desc()).all()
+    return {
+        "analyses": [a.to_dict(owner_name=owner_name) for a, owner_name in rows],
+        "scope": "all" if user.is_admin else "own",
+    }
+
+
+@app.get("/analyses/{job_id}")
+def get_analysis(job_id: str, user: User = Depends(get_current_user), db=Depends(get_db)):
+    """Reload a past analysis in the same shape /analyze returns."""
+    visible_analysis_or_404(db, job_id, user)
+
+    job_result_path = os.path.join(PROCESSED_DIR, job_id, "job_result.json")
+    if not os.path.exists(job_result_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Stored result for this analysis is no longer on disk.",
+        )
+
+    with open(job_result_path, "r", encoding="utf-8") as f:
+        job_dict = json.load(f)
+
+    return {
+        "job_id": job_dict["job_id"],
+        "lead_speaker": job_dict["lead_speaker"],
+        "total_speakers": job_dict["total_speakers"],
+        "total_segments": job_dict["total_segments"],
+        "total_duration": job_dict["total_duration"],
+        "speaker_roles": job_dict.get("speaker_roles", {}),
+        "data": job_dict["segments"],
+    }
+
+
+@app.delete("/analyses/{job_id}")
+def delete_analysis(job_id: str, user: User = Depends(get_current_user), db=Depends(get_db)):
+    row = visible_analysis_or_404(db, job_id, user)
+    db.delete(row)
+    db.commit()
+
+    # Best-effort cleanup of the on-disk artefacts.
+    job_folder = os.path.join(PROCESSED_DIR, job_id)
+    if os.path.isdir(job_folder):
+        shutil.rmtree(job_folder, ignore_errors=True)
+
+    return {"status": "deleted", "job_id": job_id}
+
+
 @app.post("/analyze")
-async def analyze_audio(file: UploadFile = File(...)):
+async def analyze_audio(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
     # ── 1. Validate & Save uploaded file ───────────────────────────────
     try:
         validate_media_file(file.filename, file.content_type)
@@ -108,6 +233,13 @@ async def analyze_audio(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {e}")
 
     print(f"Processing: {filename}")
+
+    # The pipeline below runs for minutes. Hold no Postgres connection open
+    # across it — Neon closes idle sockets, and the ownership INSERT at the end
+    # would then fail, leaving a job nobody can open. Everything we still need
+    # from `user` is read now, before the session is released.
+    owner_id = user.id
+    db.close()
 
     # ── 2. Convert media to WAV ──────────────────────────────────────
     try:
@@ -156,6 +288,40 @@ async def analyze_audio(file: UploadFile = File(...)):
     # ── 4. Serialise and return ────────────────────────────────────────
     job_dict = job.to_dict()
 
+    # ── 5. Record ownership so this job shows up in the user's history ─
+    total_score = None
+    report_path = os.path.join(PROCESSED_DIR, file_id, "report.json")
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, "r", encoding="utf-8") as f:
+                total_score = json.load(f).get("total_score")
+        except Exception:
+            pass
+
+    def _record_ownership(session):
+        # merge(), not add(), so a retry after a half-lost commit is harmless.
+        session.merge(Analysis(
+            job_id=job_dict["job_id"],
+            owner_id=owner_id,
+            filename=safe_filename,
+            created_at=dt.datetime.utcnow(),
+            total_speakers=job_dict["total_speakers"],
+            total_segments=job_dict["total_segments"],
+            total_duration=job_dict["total_duration"],
+            lead_speaker=job_dict["lead_speaker"],
+            total_score=total_score,
+        ))
+
+    # The analysis itself succeeded — don't fail the request over history. But
+    # do tell the client, because without this row /analyses and /report/{id}
+    # will 404 for a job that is sitting complete on disk.
+    recorded = write_in_fresh_session(_record_ownership)
+    if not recorded:
+        print(
+            f"⚠️ Failed to record analysis ownership for {job_dict['job_id']} — "
+            f"it will not appear in history until re-linked."
+        )
+
     # Keep the "data" key the frontend already expects
     return {
         "job_id": job_dict["job_id"],
@@ -165,14 +331,23 @@ async def analyze_audio(file: UploadFile = File(...)):
         "total_duration": job_dict["total_duration"],
         "speaker_roles": job_dict.get("speaker_roles", {}),
         "data": job_dict["segments"],
+        # False means the job finished but isn't linked to the user, so the
+        # history list and the report endpoint won't find it.
+        "history_recorded": recorded,
     }
 
 
 # ── REPORT ENDPOINT ──────────────────────────────────────────
 
 @app.get("/report/{job_id}")
-async def get_report(job_id: str):
+async def get_report(
+    job_id: str,
+    user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
     """Return the generated report for a processed job enriched with speaker stats."""
+    visible_analysis_or_404(db, job_id, user)
+
     report_path = os.path.join(PROCESSED_DIR, job_id, "report.json")
     job_result_path = os.path.join(PROCESSED_DIR, job_id, "job_result.json")
     
@@ -274,7 +449,12 @@ async def get_report(job_id: str):
 # ── RAG UPLOAD ENDPOINT ──────────────────────────────────────
 
 @app.post("/rag/upload")
-async def rag_upload(file: UploadFile = File(...)):
+async def rag_upload(
+    file: UploadFile = File(...),
+    user: User = Depends(require_admin),
+):
+    """Index a guideline document. Admin only — the guideline base is shared
+    by every user, so a normal account must not be able to change it."""
     # Save uploaded file
     file_id = str(uuid.uuid4())[:8]
     filename = f"{file_id}_{file.filename}"

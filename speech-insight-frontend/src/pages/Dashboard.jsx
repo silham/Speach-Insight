@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { api, audioUrl } from '../api/client';
+import { useAuth } from '../hooks/authContext';
+import { AnalysisHistory } from '../components/Common/AnalysisHistory';
 import { Skeleton } from '../components/Common/Skeleton';
 import { BadgeGroup, EmotionBadge, RoleBadge } from '../components/Common/BadgeGroup';
 import { EvaluationAccordion } from '../components/Evaluation/EvaluationAccordion';
@@ -10,9 +12,10 @@ import { TranscriptFilters } from '../components/Transcript/TranscriptFilters';
 import { useTranscriptFilters } from '../hooks/useTranscriptFilters';
 import { useSpeakerAnalysis } from '../hooks/useSpeakerAnalysis';
 import { getSpeakerTheme, mapRoleLabel } from '../utils/speakerUtils';
-import { Clock, MessageSquare, Users, Target, AlertTriangle, Search } from 'lucide-react';
+import { Clock, MessageSquare, Users, Target, AlertTriangle, Search, LogOut, History } from 'lucide-react';
 
 export const Dashboard = () => {
+  const { user, logout, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('pipeline');
 
   // Theme state — persisted in localStorage
@@ -41,6 +44,11 @@ export const Dashboard = () => {
   const [ragFile, setRagFile] = useState(null);
   const [ragLoading, setRagLoading] = useState(false);
   const [ragStatus, setRagStatus] = useState("");
+
+  // Past analyses visible to this user (own only, or all for an admin)
+  const [analyses, setAnalyses] = useState([]);
+  const [historyScope, setHistoryScope] = useState('own');
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [rightPanelTab, setRightPanelTab] = useState('report');
@@ -83,6 +91,88 @@ export const Dashboard = () => {
     };
   }, []);
 
+  const refreshHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get('/analyses');
+      setAnalyses(res.data.analyses);
+      setHistoryScope(res.data.scope);
+    } catch (err) {
+      console.warn('Could not load analysis history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refreshHistory(); }, [refreshHistory]);
+
+  const applyJobPayload = (data, filename) => {
+    setResults(data.data);
+    setMetadata({
+      job_id: data.job_id,
+      lead_speaker: data.lead_speaker,
+      total_speakers: data.total_speakers,
+      total_segments: data.total_segments,
+      total_duration: data.total_duration,
+      speaker_roles: data.speaker_roles || {},
+      filename,
+    });
+    setSelectedSegmentId(data.data.length > 0 ? data.data[0].segment_id : null);
+  };
+
+  /** Reopen a stored analysis. The backend 404s if it isn't ours. */
+  const handleOpenAnalysis = async (jobId) => {
+    if (metadata?.job_id === jobId) return;
+
+    setLoading(true);
+    setStatus("Loading stored analysis...");
+    setReport(null);
+    clearFilters();
+
+    try {
+      const row = analyses.find(a => a.job_id === jobId);
+      const res = await api.get(`/analyses/${jobId}`);
+      applyJobPayload(res.data, row?.filename || jobId);
+      setActiveTab('pipeline');
+      setStatus("");
+
+      try {
+        const reportRes = await api.get(`/report/${jobId}`);
+        setReport(reportRes.data);
+      } catch {
+        console.warn('Report not available for this analysis.');
+      }
+    } catch (error) {
+      setStatus("Error: " + (error.response?.data?.detail || "Could not load this analysis"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAnalysis = async (jobId, filename) => {
+    if (!window.confirm(`Delete the analysis for "${filename}"? This cannot be undone.`)) return;
+
+    try {
+      await api.delete(`/analyses/${jobId}`);
+      setAnalyses(prev => prev.filter(a => a.job_id !== jobId));
+      if (metadata?.job_id === jobId) {
+        resetSession();
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+      window.alert(error.response?.data?.detail || 'Could not delete this analysis.');
+    }
+  };
+
+  const resetSession = () => {
+    setFile(null);
+    setResults([]);
+    setMetadata(null);
+    setReport(null);
+    setStatus("");
+    clearFilters();
+  };
+
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -105,31 +195,19 @@ export const Dashboard = () => {
     setPlayingSegmentId(null);
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/analyze", formData, {
+      const response = await api.post("/analyze", formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       const data = response.data;
-      setResults(data.data);
-      setMetadata({
-        job_id: data.job_id,
-        lead_speaker: data.lead_speaker,
-        total_speakers: data.total_speakers,
-        total_segments: data.total_segments,
-        total_duration: data.total_duration,
-        speaker_roles: data.speaker_roles || {},
-        filename: file.name
-      });
-      
-      if (data.data.length > 0) {
-        setSelectedSegmentId(data.data[0].segment_id);
-      }
+      applyJobPayload(data, file.name);
 
       setStatus("Analysis completed successfully.");
+      refreshHistory();
 
       // Fetch performance report
       try {
-        const reportRes = await axios.get(`http://127.0.0.1:8000/report/${data.job_id}`);
+        const reportRes = await api.get(`/report/${data.job_id}`);
         setReport(reportRes.data);
       } catch (reportErr) {
         console.warn("Performance report not available:", reportErr);
@@ -160,7 +238,7 @@ export const Dashboard = () => {
     setRagStatus("Indexing reference guidelines document...");
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/rag/upload", formData, {
+      const response = await api.post("/rag/upload", formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setRagStatus(`Success! Indexed ${response.data.chunks_added} segments into ChromaDB guidelines base.`);
@@ -187,8 +265,7 @@ export const Dashboard = () => {
       audioInstanceRef.current.pause();
     }
 
-    const fullUrl = url.startsWith('http') ? url : `http://127.0.0.1:8000${url}`;
-    const audio = new Audio(fullUrl);
+    const audio = new Audio(audioUrl(url));
     audioInstanceRef.current = audio;
     setPlayingSegmentId(segmentId);
 
@@ -341,15 +418,19 @@ export const Dashboard = () => {
             Evaluation Base
           </button>
 
-          <button
-            className={`nav-item-btn ${activeTab === 'guidelines' ? 'active' : ''}`}
-            onClick={() => setActiveTab('guidelines')}
-          >
-            <svg className="nav-icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            Guideline Base
-          </button>
+          {/* The guideline base is shared by everyone, so only admins may
+              change it. The backend enforces this too. */}
+          {isAdmin && (
+            <button
+              className={`nav-item-btn ${activeTab === 'guidelines' ? 'active' : ''}`}
+              onClick={() => setActiveTab('guidelines')}
+            >
+              <svg className="nav-icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Guideline Base
+            </button>
+          )}
         </nav>
 
         {metadata && (
@@ -361,21 +442,39 @@ export const Dashboard = () => {
               <span className="dot-sep" />
               <span>{metadata.total_duration.toFixed(0)}s</span>
             </div>
-            <button
-              className="btn-sidebar-reset"
-              onClick={() => {
-                setFile(null);
-                setResults([]);
-                setMetadata(null);
-                setReport(null);
-                setStatus("");
-                clearFilters();
-              }}
-            >
+            <button className="btn-sidebar-reset" onClick={resetSession}>
               Reset Session
             </button>
           </div>
         )}
+
+        {/* ─── Analysis history ─── */}
+        <div className="sidebar-history">
+          <div className="sidebar-section-title">
+            <History size={13} />
+            <span>{historyScope === 'all' ? 'All Analyses' : 'My Analyses'}</span>
+            {analyses.length > 0 && <span className="history-count">{analyses.length}</span>}
+          </div>
+          <AnalysisHistory
+            analyses={analyses}
+            loading={historyLoading}
+            activeJobId={metadata?.job_id}
+            scope={historyScope}
+            onOpen={handleOpenAnalysis}
+            onDelete={handleDeleteAnalysis}
+          />
+        </div>
+
+        {/* ─── Signed-in user ─── */}
+        <div className="sidebar-user">
+          <div className="sidebar-user-info">
+            <span className="sidebar-user-name">{user.name}</span>
+            <span className="sidebar-user-role">{user.role}</span>
+          </div>
+          <button className="sidebar-logout" onClick={logout} title="Sign out">
+            <LogOut size={15} />
+          </button>
+        </div>
       </aside>
 
       {/* 2. Main Dashboard Content */}
@@ -910,7 +1009,7 @@ export const Dashboard = () => {
           </div>
         )}
 
-        {activeTab === 'guidelines' && (
+        {activeTab === 'guidelines' && isAdmin && (
           <div className="workspace-rag">
             <div className="rag-layout">
               <div className="card-panel rag-upload-card">
