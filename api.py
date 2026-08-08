@@ -17,7 +17,9 @@ if sys.platform.startswith('win'):
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import OperationalError
 
 from auth import (
     Analysis,
@@ -29,7 +31,9 @@ from auth import (
     require_admin,
     verify_password,
     visible_analysis_or_404,
+    write_in_fresh_session,
 )
+import datetime as dt
 import shutil
 import os
 from media_utils import (
@@ -75,8 +79,29 @@ app.add_middleware(
 )
 
 # --- Database (users + analysis ownership) ---
-init_db()
-print("✅ Database ready.")
+if init_db():
+    print("✅ Database ready.")
+else:
+    print(
+        "⚠️ Starting without a verified database connection. Login, history and "
+        "report endpoints will answer 503 until Postgres is reachable again; "
+        "everything else works as normal."
+    )
+
+
+@app.exception_handler(OperationalError)
+async def database_unavailable(request, exc):
+    """Turn a dropped/refused Postgres connection into a 503, not a 500 trace.
+
+    The frontend can't distinguish a genuine bug from a database blip if both
+    arrive as 500. This handler sits inside the CORS middleware, so the browser
+    still sees the response rather than a CORS failure.
+    """
+    print(f"⚠️ Database unavailable on {request.method} {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database temporarily unavailable — please retry shortly."},
+    )
 
 app.mount("/audio", StaticFiles(directory=PROCESSED_DIR), name="audio")
 
@@ -209,6 +234,13 @@ async def analyze_audio(
 
     print(f"Processing: {filename}")
 
+    # The pipeline below runs for minutes. Hold no Postgres connection open
+    # across it — Neon closes idle sockets, and the ownership INSERT at the end
+    # would then fail, leaving a job nobody can open. Everything we still need
+    # from `user` is read now, before the session is released.
+    owner_id = user.id
+    db.close()
+
     # ── 2. Convert media to WAV ──────────────────────────────────────
     try:
         audio_path = convert_media_to_wav(file_path)
@@ -266,22 +298,29 @@ async def analyze_audio(
         except Exception:
             pass
 
-    try:
-        db.add(Analysis(
+    def _record_ownership(session):
+        # merge(), not add(), so a retry after a half-lost commit is harmless.
+        session.merge(Analysis(
             job_id=job_dict["job_id"],
-            owner_id=user.id,
+            owner_id=owner_id,
             filename=safe_filename,
+            created_at=dt.datetime.utcnow(),
             total_speakers=job_dict["total_speakers"],
             total_segments=job_dict["total_segments"],
             total_duration=job_dict["total_duration"],
             lead_speaker=job_dict["lead_speaker"],
             total_score=total_score,
         ))
-        db.commit()
-    except Exception as exc:
-        # The analysis itself succeeded — don't fail the request over history.
-        db.rollback()
-        print(f"⚠️ Failed to record analysis ownership: {exc}")
+
+    # The analysis itself succeeded — don't fail the request over history. But
+    # do tell the client, because without this row /analyses and /report/{id}
+    # will 404 for a job that is sitting complete on disk.
+    recorded = write_in_fresh_session(_record_ownership)
+    if not recorded:
+        print(
+            f"⚠️ Failed to record analysis ownership for {job_dict['job_id']} — "
+            f"it will not appear in history until re-linked."
+        )
 
     # Keep the "data" key the frontend already expects
     return {
@@ -292,6 +331,9 @@ async def analyze_audio(
         "total_duration": job_dict["total_duration"],
         "speaker_roles": job_dict.get("speaker_roles", {}),
         "data": job_dict["segments"],
+        # False means the job finished but isn't linked to the user, so the
+        # history list and the report endpoint won't find it.
+        "history_recorded": recorded,
     }
 
 

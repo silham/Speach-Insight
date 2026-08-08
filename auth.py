@@ -9,6 +9,7 @@ Two roles:
 """
 
 import os
+import time
 import datetime as dt
 
 import bcrypt
@@ -25,6 +26,7 @@ from sqlalchemy import (
     String,
     create_engine,
 )
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 load_dotenv()
@@ -47,8 +49,9 @@ TOKEN_TTL = dt.timedelta(hours=12)
 
 ROLES = ("admin", "user")
 
-# pool_pre_ping keeps pooled Neon connections from going stale between requests.
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# pool_pre_ping keeps pooled Neon connections from going stale between requests;
+# pool_recycle retires them before Neon's own idle timeout can do it for us.
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
@@ -113,9 +116,26 @@ class Analysis(Base):
         }
 
 
-def init_db():
-    """Create tables if they don't exist. Safe to call on every startup."""
-    Base.metadata.create_all(engine)
+def init_db(attempts: int = 3) -> bool:
+    """Create tables if they don't exist. Safe to call on every startup.
+
+    Returns False rather than raising when Postgres is unreachable. A dead
+    database must not stop the API process from booting: the tables are almost
+    certainly already there from an earlier run, model loading takes minutes,
+    and the endpoints that don't touch Postgres keep working. Requests that do
+    need it answer 503 instead — see the handler in api.py.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            Base.metadata.create_all(engine)
+            return True
+        except OperationalError as exc:
+            if attempt == attempts:
+                print(f"⚠️ Database unreachable — schema check skipped: {exc}")
+                return False
+            print(f"⚠️ Database unreachable (attempt {attempt}/{attempts}), retrying…")
+            time.sleep(2 ** (attempt - 1))
+    return False
 
 
 # ── Passwords ─────────────────────────────────────────────────────────
@@ -151,6 +171,49 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def write_in_fresh_session(work, attempts: int = 3) -> bool:
+    """Run ``work(session)`` and commit, in a session of its own.
+
+    Use this for writes that happen *after* long-running work such as the
+    analysis pipeline. A request-scoped session holds its Postgres connection
+    checked out for the whole request, so by the time a minutes-long job
+    finishes, Neon has usually closed that socket — and pool_pre_ping cannot
+    save it, because it only validates connections at checkout time.
+
+    Opening a fresh session here means pre_ping runs against a pool entry right
+    before the write; the retries cover the case where the pooled connections
+    are stale too, or the compute is cold. ``work`` must be idempotent (use
+    ``session.merge``) — a connection can also die after the server committed
+    but before we hear back, and the retry would then write the same row twice.
+
+    Returns True on success, False if every attempt failed.
+    """
+    for attempt in range(1, attempts + 1):
+        db = SessionLocal()
+        try:
+            work(db)
+            db.commit()
+            return True
+        except OperationalError as exc:
+            # Covers both a socket Neon closed under us and a connect that timed
+            # out while a suspended compute wakes up. Constraint and mapping
+            # errors are DBAPIError but not OperationalError, so they fall
+            # through to the handler below and fail fast instead of retrying.
+            db.rollback()
+            if attempt == attempts:
+                print(f"⚠️ Database write failed after {attempts} attempts: {exc}")
+                return False
+            print(f"⚠️ Database connection problem (attempt {attempt}/{attempts}), retrying…")
+            time.sleep(2 ** (attempt - 1))
+        except Exception as exc:
+            db.rollback()
+            print(f"⚠️ Database write failed: {exc}")
+            return False
+        finally:
+            db.close()
+    return False
 
 
 _bearer = HTTPBearer(auto_error=False)
