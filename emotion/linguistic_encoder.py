@@ -52,7 +52,7 @@ class LinguisticEncoder(nn.Module):
         print("✅ Linguistic Encoder loaded.")
 
     @torch.no_grad()
-    def forward(self, text: str) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, text: str) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Tokenize *text* and run through BERT.
 
@@ -65,6 +65,10 @@ class LinguisticEncoder(nn.Module):
         -------
         cls_embedding : Tensor [1, 768]
         token_features : Tensor [1, seq_len, 768]
+        attention_mask : Tensor [1, seq_len]
+            1 for real tokens, 0 for ``[PAD]``.  Text is padded to
+            ``max_length`` regardless of length, so cross-attention needs this
+            to avoid pooling over padding.
         """
         inputs = self.tokenizer(
             text,
@@ -81,17 +85,18 @@ class LinguisticEncoder(nn.Module):
         last_hidden = outputs.last_hidden_state          # [1, seq_len, 768]
         cls_embedding = last_hidden[:, 0, :]             # [1, 768]
 
-        return cls_embedding.cpu(), last_hidden.cpu()
+        return cls_embedding.cpu(), last_hidden.cpu(), attention_mask.cpu()
 
     # ------------------------------------------------------------------
     # High-level convenience
     # ------------------------------------------------------------------
     def encode(self, text: str) -> dict:
         """
-        Returns dict with keys: cls_embedding, token_features.
+        Returns dict with keys: cls_embedding, token_features, attention_mask.
         """
-        cls_embedding, token_features = self.forward(text)
+        cls_embedding, token_features, attention_mask = self.forward(text)
         return {
             "cls_embedding": cls_embedding,       # [1, 768]
             "token_features": token_features,     # [1, seq_len, 768]
+            "attention_mask": attention_mask,     # [1, seq_len]
         }

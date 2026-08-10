@@ -83,11 +83,33 @@ class CrossAttentionFusion(nn.Module):
         text_cls: torch.Tensor,
         text_tokens: torch.Tensor,
         vader_features: torch.Tensor,
+        text_mask: torch.Tensor | None = None,
+        audio_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        text_mask : Tensor [B, T_t], optional
+            1 for real tokens, 0 for ``[PAD]`` (HuggingFace convention).
+        audio_mask : Tensor [B, T_a], optional
+            1 for real frames, 0 for padding added when batching clips of
+            differing length.
+
+        Both masks are optional so single-clip inference (nothing to pad on the
+        audio side) keeps working unchanged.  They matter a great deal in
+        training: text is padded to ``MAX_LENGTH`` on *every* utterance, so
+        without ``text_mask`` the audio query pools mostly over ``[PAD]``.
+        """
+        # nn.MultiheadAttention wants True = "ignore this position", the
+        # inverse of the HuggingFace 1 = "real token" convention.
+        text_kpm = (text_mask == 0) if text_mask is not None else None
+        audio_kpm = (audio_mask == 0) if audio_mask is not None else None
+
         # Audio→Text: which words does the acoustic tone align with?
         audio_q = audio_pooled.unsqueeze(1)                     # [B, 1, 768]
         audio_attended, _ = self.audio_to_text_attn(
             query=audio_q, key=text_tokens, value=text_tokens,
+            key_padding_mask=text_kpm,
         )                                                       # [B, 1, 768]
         audio_attended = audio_attended.squeeze(1)               # [B, 768]
 
@@ -95,6 +117,7 @@ class CrossAttentionFusion(nn.Module):
         text_q = text_cls.unsqueeze(1)                           # [B, 1, 768]
         text_attended, _ = self.text_to_audio_attn(
             query=text_q, key=audio_frames, value=audio_frames,
+            key_padding_mask=audio_kpm,
         )                                                       # [B, 1, 768]
         text_attended = text_attended.squeeze(1)                 # [B, 768]
 

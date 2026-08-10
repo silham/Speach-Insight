@@ -209,13 +209,21 @@ class MultimodalEmotionClassifier(nn.Module):
         text_cls: torch.Tensor,
         text_tokens: torch.Tensor,
         vader_features: torch.Tensor,
+        text_mask: torch.Tensor | None = None,
+        audio_mask: torch.Tensor | None = None,
     ) -> dict:
         """
         Full forward pass through cross-attention fusion + heads.
         Used after the model has been trained.
+
+        ``text_mask`` / ``audio_mask`` mark real positions (1) vs padding (0).
+        Training always supplies them, so inference must too — otherwise the
+        fused vector at serve time is drawn from a different distribution than
+        the one the weights were fitted on.
         """
         fused = self.fusion(
             audio_pooled, audio_frames, text_cls, text_tokens, vader_features,
+            text_mask=text_mask, audio_mask=audio_mask,
         )  # [B, 512]
 
         emotion_logits = self.emotion_head(fused)         # [B, 7]
@@ -241,6 +249,7 @@ class MultimodalEmotionClassifier(nn.Module):
         text_cls: torch.Tensor,
         text_tokens: torch.Tensor,
         vader_features: torch.Tensor,
+        text_mask: torch.Tensor | None = None,
     ) -> dict:
         """
         High-level prediction that routes through zero-shot or trained path.
@@ -264,6 +273,7 @@ class MultimodalEmotionClassifier(nn.Module):
             with torch.no_grad():
                 out = self.forward_trained(
                     audio_pooled, audio_frames, text_cls, text_tokens, vader_features,
+                    text_mask=text_mask,   # single clip → audio needs no padding
                 )
             emotion_probs = out["emotion_probs"].squeeze(0)   # [7]
             sarcasm_score = out["sarcasm_prob"].item()

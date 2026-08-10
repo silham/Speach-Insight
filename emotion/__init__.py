@@ -95,6 +95,7 @@ class EmotionAnalyzer:
             text_cls=linguistic_out["cls_embedding"],
             text_tokens=linguistic_out["token_features"],
             vader_features=vader_out["tensor"],
+            text_mask=linguistic_out["attention_mask"],
         )
 
         # 5. Attach auxiliary info
