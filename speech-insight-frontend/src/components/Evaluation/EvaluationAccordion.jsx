@@ -49,70 +49,68 @@ export const EvaluationAccordion = React.memo(({ cat, results, isExpanded, onTog
         </div>
       </div>
 
-      {isExpanded && (
-        <div className="eval-details-pane">
-          {/* Explanation */}
-          {details.explanation && (
-            <div className="eval-detail-section">
-              <span className="eval-detail-title">Score Explanation</span>
-              <p className="eval-detail-text">{details.explanation}</p>
-            </div>
-          )}
+      <div className="eval-details-pane" style={{ display: isExpanded ? 'block' : 'none' }}>
+        {/* Explanation */}
+        {details.explanation && (
+          <div className="eval-detail-section">
+            <span className="eval-detail-title">Score Explanation</span>
+            <p className="eval-detail-text">{details.explanation}</p>
+          </div>
+        )}
 
-          {/* Evidence */}
-          {details.evidence && details.evidence.length > 0 && (
-            <div className="eval-detail-section">
-              <span className="eval-detail-title">Evidence Found</span>
-              <ul className="eval-detail-list">
-                {details.evidence.map((ev, i) => (
-                  <li key={i} className="eval-detail-item" style={{ color: 'var(--text-secondary)', display: 'flex', gap: '0.3rem' }}>
-                    <CheckCircle2 size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                    <span>{ev}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {/* Evidence */}
+        {details.evidence && details.evidence.length > 0 && (
+          <div className="eval-detail-section">
+            <span className="eval-detail-title">Evidence Found</span>
+            <ul className="eval-detail-list">
+              {details.evidence.map((ev, i) => (
+                <li key={i} className="eval-detail-item" style={{ color: 'var(--text-secondary)', display: 'flex', gap: '0.3rem' }}>
+                  <CheckCircle2 size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
+                  <span>{ev}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-          {/* Positive Examples */}
-          {details.positiveExamples && details.positiveExamples.length > 0 && (
-            <div className="eval-detail-section">
-              <span className="eval-detail-title">Positive Examples</span>
-              <ul className="eval-detail-list">
-                {details.positiveExamples.map((ex, i) => (
-                  <li key={i} className="eval-detail-item" style={{ color: '#10b981', display: 'flex', gap: '0.3rem' }}>
-                    <Star size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                    <span>{ex}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {/* Positive Examples */}
+        {details.positiveExamples && details.positiveExamples.length > 0 && (
+          <div className="eval-detail-section">
+            <span className="eval-detail-title">Positive Examples</span>
+            <ul className="eval-detail-list">
+              {details.positiveExamples.map((ex, i) => (
+                <li key={i} className="eval-detail-item" style={{ color: '#10b981', display: 'flex', gap: '0.3rem' }}>
+                  <Star size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
+                  <span>{ex}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-          {/* Missed Opportunities */}
-          {details.missedOpportunities && details.missedOpportunities.length > 0 && (
-            <div className="eval-detail-section">
-              <span className="eval-detail-title">Missed Opportunities</span>
-              <ul className="eval-detail-list">
-                {details.missedOpportunities.map((mo, i) => (
-                  <li key={i} className="eval-detail-item" style={{ color: '#ef4444', display: 'flex', gap: '0.3rem' }}>
-                    <XCircle size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                    <span>{mo}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {/* Missed Opportunities */}
+        {details.missedOpportunities && details.missedOpportunities.length > 0 && (
+          <div className="eval-detail-section">
+            <span className="eval-detail-title">Missed Opportunities</span>
+            <ul className="eval-detail-list">
+              {details.missedOpportunities.map((mo, i) => (
+                <li key={i} className="eval-detail-item" style={{ color: '#ef4444', display: 'flex', gap: '0.3rem' }}>
+                  <XCircle size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
+                  <span>{mo}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-          {/* Recommendation */}
-          {details.recommendation && (
-            <div className="eval-detail-section recommendation-section">
-              <span className="eval-detail-title" style={{ color: 'var(--accent)' }}>Recommendation</span>
-              <p className="eval-detail-text recommendation-text" style={{ fontWeight: 500 }}>{details.recommendation}</p>
-            </div>
-          )}
-        </div>
-      )}
+        {/* Recommendation */}
+        {details.recommendation && (
+          <div className="eval-detail-section recommendation-section">
+            <span className="eval-detail-title" style={{ color: 'var(--accent)' }}>Recommendation</span>
+            <p className="eval-detail-text recommendation-text" style={{ fontWeight: 500 }}>{details.recommendation}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 });

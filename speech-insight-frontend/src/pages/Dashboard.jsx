@@ -12,7 +12,7 @@ import { TranscriptFilters } from '../components/Transcript/TranscriptFilters';
 import { useTranscriptFilters } from '../hooks/useTranscriptFilters';
 import { useSpeakerAnalysis } from '../hooks/useSpeakerAnalysis';
 import { getSpeakerTheme, mapRoleLabel } from '../utils/speakerUtils';
-import { Clock, MessageSquare, Users, Target, AlertTriangle, Search, LogOut, History } from 'lucide-react';
+import { Clock, MessageSquare, Users, Target, AlertTriangle, Search, LogOut, History, Download } from 'lucide-react';
 
 export const Dashboard = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -563,11 +563,21 @@ export const Dashboard = () => {
 
                 {/* ─── HIGHLIGHTED GUIDELINE SCORES ─── */}
                 <div className="guideline-scores-highlight" style={{ marginTop: '1.25rem', padding: '1.5rem', backgroundColor: 'var(--panel-bg)', borderRadius: 'var(--border-radius)', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                  <div className="section-header" style={{ marginBottom: '1.25rem' }}>
+                  <div className="section-header" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div className="header-text-group">
-                      <h4 style={{ fontSize: '1.1rem', color: 'var(--text-main)', fontWeight: 700 }}>Guideline Scores</h4>
+                      <h4 style={{ fontSize: '1.1rem', color: 'var(--text-main)', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>Guideline Scores</h4>
                       <span className="section-subtitle">Overall compliance evaluation based on your RAG base.</span>
                     </div>
+                    {report && (
+                      <button 
+                        onClick={() => window.print()}
+                        className="btn-pdf-export no-print"
+                        title="Export report as PDF"
+                      >
+                        <Download size={12} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                        <span>PDF</span>
+                      </button>
+                    )}
                   </div>
                   {report ? (
                     <div className="report-tab-layout">
@@ -946,7 +956,24 @@ export const Dashboard = () => {
         )}
 
         {activeTab === 'report' && report && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '900px' }}>
+          <div className="printable-report" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '900px', width: '100%' }}>
+            <div className="report-header-actions no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'Outfit, sans-serif' }}>Analysis Report</h3>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-light)' }}>
+                  Acoustic analysis, speaker roles, and RAG guidelines compliance report.
+                </span>
+              </div>
+              <button 
+                onClick={() => window.print()} 
+                className="btn-pdf-export no-print" 
+                title="Export report as PDF"
+              >
+                <Download size={12} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                <span>PDF</span>
+              </button>
+            </div>
+
             <div className="card-panel">
               <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Guidelines Scorecard Summary</h4>
               <EvaluationSummary

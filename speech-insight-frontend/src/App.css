@@ -2318,3 +2318,413 @@
 .sidebar-nav .sidebar-job-badge {
   margin-top: 1rem;
 }
+
+/* ==========================================================================
+   Report UI Redesign & PDF Print Layout
+   ========================================================================== */
+
+/* --- Premium Report Score Card --- */
+.report-score-card {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.report-score-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.radial-score-container {
+  flex-shrink: 0;
+}
+
+.radial-score-circle {
+  position: relative;
+  width: 110px !important;
+  height: 110px !important;
+}
+
+.radial-track {
+  stroke: rgba(255, 255, 255, 0.04);
+  stroke-width: 2.8;
+  fill: none;
+}
+
+[data-theme="light"] .radial-track {
+  stroke: rgba(0, 0, 0, 0.04);
+}
+
+.radial-progress {
+  stroke-width: 2.8;
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.radial-inner-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.score-num {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 2.25rem !important;
+  font-weight: 800 !important;
+  line-height: 0.95 !important;
+  color: var(--text-main) !important;
+}
+
+.score-total {
+  font-size: 0.8rem !important;
+  color: var(--text-light) !important;
+  font-weight: 600 !important;
+  margin-top: 2px !important;
+}
+
+.report-score-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.report-score-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.report-score-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* --- Tone profile improvements --- */
+.meeting-vibe-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem !important;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.vibe-label {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+}
+
+.vibe-pill {
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  padding: 0.25rem 0.65rem !important;
+  border-radius: 6px !important;
+  background-color: var(--success-light) !important;
+  border: 1px solid rgba(0, 255, 157, 0.1) !important;
+  color: var(--success) !important;
+}
+
+/* --- Strengths & Recommendations Grid --- */
+.report-summaries-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1rem !important;
+}
+
+.summary-list-card {
+  padding: 1.25rem !important;
+  border-radius: var(--radius-md) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+}
+
+.summary-list-card.strength {
+  background-color: rgba(0, 255, 157, 0.02) !important;
+  border: 1px solid rgba(0, 255, 157, 0.08) !important;
+}
+
+.summary-list-card.improvement {
+  background-color: rgba(255, 102, 0, 0.02) !important;
+  border: 1px solid rgba(255, 102, 0, 0.08) !important;
+}
+
+.summary-list-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-list-card.strength .card-header {
+  color: var(--success);
+}
+
+.summary-list-card.improvement .card-header {
+  color: var(--orange);
+}
+
+.summary-list-card h6 {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  text-transform: capitalize !important;
+  letter-spacing: normal !important;
+  margin: 0 !important;
+}
+
+.summary-list-card ul {
+  margin: 0 !important;
+  padding-left: 1.25rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.4rem !important;
+}
+
+.summary-list-card li {
+  font-size: 0.88rem !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.45 !important;
+}
+
+/* --- Accordion modifications for category scores --- */
+.eval-summary {
+  height: 56px !important;
+  padding: 0 1.25rem !important;
+  gap: 1rem !important;
+}
+
+.eval-info {
+  width: 220px !important;
+}
+
+.eval-name {
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+}
+
+.eval-score {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+
+.eval-progress-container {
+  height: 6px !important;
+  border-radius: 3px !important;
+  background-color: var(--track-bg) !important;
+}
+
+.eval-progress-bar {
+  height: 100% !important;
+  border-radius: 3px !important;
+}
+
+/* --- Print styling for high-quality PDF --- */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  
+  .saas-layout {
+    background: #ffffff !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Hide sidebar and all other non-report UI panels */
+  .sidebar-nav,
+  .no-print,
+  .stats-ribbon,
+  .accordion-container,
+  .leader-resolution-container,
+  .theme-toggle-btn,
+  .eval-dropdown-toggle {
+    display: none !important;
+  }
+
+  /* Ensure the main container spans full width */
+  .saas-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .printable-report,
+  .guideline-scores-highlight {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: block !important;
+  }
+
+  .card-panel {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    padding: 1.5rem !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .report-score-card {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+  }
+
+  .summary-list-card.strength {
+    background: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .summary-list-card.improvement {
+    background: #fff7ed !important;
+    border: 1px solid #ffedd5 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .meeting-vibe-summary {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    page-break-inside: avoid !important;
+  }
+
+  .vibe-pill {
+    background: #d1fae5 !important;
+    border: 1px solid #a7f3d0 !important;
+    color: #065f46 !important;
+  }
+
+  .eval-row {
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .eval-details-pane {
+    background: #f9fafb !important;
+    border-top: 1px solid #e5e7eb !important;
+    display: block !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Make sure text colors print dark enough */
+  .score-num, .report-score-title, .eval-name, .eval-score, .summary-list-card h6, .recommendation-text, .segment-comment-title {
+    color: #111827 !important;
+  }
+
+  .report-score-description, .vibe-label, .summary-list-card li, .eval-detail-text, .eval-detail-title, .eval-detail-item, .segment-comment-text, .segment-comment-quote {
+    color: #374151 !important;
+  }
+
+  .eval-details-pane,
+  .eval-details-pane *,
+  .segment-comment-card,
+  .segment-comment-card * {
+    color: #1f2937 !important;
+  }
+
+  /* Segment comments print layout overrides */
+  .segment-comment-card {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+/* --- Sleek PDF Export Button --- */
+.btn-pdf-export {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  padding: 0.35rem 0.6rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  width: auto !important;
+  height: 26px !important;
+  cursor: pointer !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  border: 1px solid rgba(139, 92, 246, 0.25) !important;
+  color: #a78bfa !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+
+.btn-pdf-export:hover {
+  background: rgba(139, 92, 246, 0.18) !important;
+  border-color: rgba(139, 92, 246, 0.45) !important;
+  color: #c084fc !important;
+}
+
+[data-theme="light"] .btn-pdf-export {
+  background: rgba(79, 70, 229, 0.06) !important;
+  border: 1px solid rgba(79, 70, 229, 0.18) !important;
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .btn-pdf-export:hover {
+  background: rgba(79, 70, 229, 0.12) !important;
+  border-color: rgba(79, 70, 229, 0.3) !important;
+  color: #3730a3 !important;
+}
+

@@ -1,10 +1,10 @@
 export const CATEGORY_NAMES = {
-  template: 'Template Structure',
-  warmup: 'Warm Up & Tone',
-  praise: 'Praise & Positivity',
-  suggest: 'Suggestions Balance',
-  listen: 'Active Listening',
-  direct: 'Clear Directives',
+  template: 'Template',
+  warmup: 'Warm Up',
+  praise: 'Praise',
+  suggest: 'Suggest',
+  listen: 'Listen',
+  direct: 'Direct',
 };
 
 // Standardized to Purple family according to Visual Design System (Priority 7)

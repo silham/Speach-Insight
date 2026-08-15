@@ -418,7 +418,8 @@ Return ONLY a valid JSON object (no markdown) with this exact structure:
         elif response.startswith("```"):
             response = response[3:-3].strip()
 
-        return json.loads(response)
+        result = json.loads(response)
+        return _adjust_report_scores(result)
     except Exception as e:
         print(f"[WARNING] Report generation failed: {e}")
         return _fallback_report(evidence_data, score_data)
@@ -441,9 +442,30 @@ def _fallback_report(evidence_data: list, score_data: dict):
             "description": ev.get("evidence", "")
         })
 
-    return {
+    return _adjust_report_scores({
         "total_score": total,
         "categories": categories,
         "strengths": ["Report generation unavailable — review evidence.json for details."],
         "improvements": ["Report generation unavailable — review evidence.json for details."]
-    }
+    })
+
+
+def _adjust_report_scores(report_dict: dict) -> dict:
+    """Ensure no category gets full marks. Recalculate total score."""
+    if not report_dict or "categories" not in report_dict:
+        return report_dict
+
+    adjusted_categories = []
+    for cat in report_dict.get("categories", []):
+        sc = cat.get("score")
+        mx = cat.get("max_score")
+        if sc is not None and mx is not None:
+            if sc >= mx:
+                cat["score"] = mx - 1
+        adjusted_categories.append(cat)
+
+    report_dict["categories"] = adjusted_categories
+
+    # Recalculate total_score as sum of category scores
+    report_dict["total_score"] = sum(cat.get("score", 0) for cat in adjusted_categories)
+    return report_dict

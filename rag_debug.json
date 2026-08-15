@@ -1,7 +1,36 @@
 {
-    "warmup": [],
-    "listen": [],
-    "direct": [],
-    "praise": [],
-    "suggest": []
+    "warmup": [
+        {
+            "sentence": "warm up is recommended to do in a casual manner, encouraged to ask about life, holidays etc",
+            "predicted_label": "warmup"
+        }
+    ],
+    "suggest": [
+        {
+            "sentence": "encouraged to instruct specifically on what areas should be improved and what should be done.",
+            "predicted_label": "suggest"
+        }
+    ],
+    "direct": [
+        {
+            "sentence": "smooth end",
+            "predicted_label": "direct"
+        }
+    ],
+    "listen": [
+        {
+            "sentence": "encouraged to ask comments from the developer.",
+            "predicted_label": "listen"
+        }
+    ],
+    "praise": [
+        {
+            "sentence": "praise is important.",
+            "predicted_label": "praise"
+        },
+        {
+            "sentence": "recommend to use words like excellent, good, well done, great work, highly appreciate.",
+            "predicted_label": "praise"
+        }
+    ]
 }
