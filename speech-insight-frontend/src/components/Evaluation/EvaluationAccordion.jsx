@@ -2,6 +2,17 @@ import React from 'react';
 import { getGuidelineDetails, getScoreStatus, CATEGORY_COLORS } from '../../utils/evaluationUtils';
 import { CheckCircle2, Star, XCircle, AlertCircle, Info, Circle, ChevronDown } from 'lucide-react';
 
+const renderFormattedText = (text) => {
+  if (!text) return '';
+  const parts = text.split('**');
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return <strong key={index} style={{ fontWeight: 800, color: 'var(--text-main)' }}>{part}</strong>;
+    }
+    return part;
+  });
+};
+
 const renderStatusIcon = (type) => {
   switch (type) {
     case 'excellent': return <CheckCircle2 size={13} />;
@@ -54,7 +65,7 @@ export const EvaluationAccordion = React.memo(({ cat, results, isExpanded, onTog
         {details.explanation && (
           <div className="eval-detail-section">
             <span className="eval-detail-title">Score Explanation</span>
-            <p className="eval-detail-text">{details.explanation}</p>
+            <p className="eval-detail-text">{renderFormattedText(details.explanation)}</p>
           </div>
         )}
 
@@ -66,7 +77,7 @@ export const EvaluationAccordion = React.memo(({ cat, results, isExpanded, onTog
               {details.evidence.map((ev, i) => (
                 <li key={i} className="eval-detail-item" style={{ color: 'var(--text-secondary)', display: 'flex', gap: '0.3rem' }}>
                   <CheckCircle2 size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                  <span>{ev}</span>
+                  <span>{renderFormattedText(ev)}</span>
                 </li>
               ))}
             </ul>
@@ -81,7 +92,7 @@ export const EvaluationAccordion = React.memo(({ cat, results, isExpanded, onTog
               {details.positiveExamples.map((ex, i) => (
                 <li key={i} className="eval-detail-item" style={{ color: '#10b981', display: 'flex', gap: '0.3rem' }}>
                   <Star size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                  <span>{ex}</span>
+                  <span>{renderFormattedText(ex)}</span>
                 </li>
               ))}
             </ul>
@@ -96,7 +107,7 @@ export const EvaluationAccordion = React.memo(({ cat, results, isExpanded, onTog
               {details.missedOpportunities.map((mo, i) => (
                 <li key={i} className="eval-detail-item" style={{ color: '#ef4444', display: 'flex', gap: '0.3rem' }}>
                   <XCircle size={13} style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                  <span>{mo}</span>
+                  <span>{renderFormattedText(mo)}</span>
                 </li>
               ))}
             </ul>
@@ -107,7 +118,7 @@ export const EvaluationAccordion = React.memo(({ cat, results, isExpanded, onTog
         {details.recommendation && (
           <div className="eval-detail-section recommendation-section">
             <span className="eval-detail-title" style={{ color: 'var(--accent)' }}>Recommendation</span>
-            <p className="eval-detail-text recommendation-text" style={{ fontWeight: 500 }}>{details.recommendation}</p>
+            <p className="eval-detail-text recommendation-text" style={{ fontWeight: 500 }}>{renderFormattedText(details.recommendation)}</p>
           </div>
         )}
       </div>

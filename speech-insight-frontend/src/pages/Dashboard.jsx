@@ -53,7 +53,7 @@ export const Dashboard = () => {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [rightPanelTab, setRightPanelTab] = useState('report');
   const [devMode, setDevMode] = useState(false);
-  const [isSpeakerProfilesOpen, setIsSpeakerProfilesOpen] = useState(true);
+  const [isSpeakerProfilesOpen, setIsSpeakerProfilesOpen] = useState(false);
   const [isTranscriptsOpen, setIsTranscriptsOpen] = useState(true);
 
   const audioInstanceRef = useRef(null);
@@ -408,8 +408,6 @@ export const Dashboard = () => {
           <button
             className={`nav-item-btn ${activeTab === 'report' ? 'active' : ''}`}
             onClick={() => setActiveTab('report')}
-            disabled={!report}
-            title={!report ? "Perform speech analysis first to view reports" : ""}
           >
             <svg className="nav-icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
@@ -418,19 +416,7 @@ export const Dashboard = () => {
             Evaluation Base
           </button>
 
-          {/* The guideline base is shared by everyone, so only admins may
-              change it. The backend enforces this too. */}
-          {isAdmin && (
-            <button
-              className={`nav-item-btn ${activeTab === 'guidelines' ? 'active' : ''}`}
-              onClick={() => setActiveTab('guidelines')}
-            >
-              <svg className="nav-icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              </svg>
-              Guideline Base
-            </button>
-          )}
+
         </nav>
 
         {metadata && (
@@ -955,167 +941,254 @@ export const Dashboard = () => {
           </div>
         )}
 
-        {activeTab === 'report' && report && (
-          <div className="printable-report" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '900px', width: '100%' }}>
-            <div className="report-header-actions no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'Outfit, sans-serif' }}>Analysis Report</h3>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-light)' }}>
-                  Acoustic analysis, speaker roles, and RAG guidelines compliance report.
-                </span>
+        {activeTab === 'report' && (
+          report ? (
+            <div className="printable-report" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '900px', width: '100%' }}>
+              <div className="report-header-actions no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'Outfit, sans-serif' }}>Analysis Report</h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-light)' }}>
+                    Acoustic analysis, speaker roles, and RAG guidelines compliance report.
+                  </span>
+                </div>
+                <button 
+                  onClick={() => window.print()} 
+                  className="btn-pdf-export no-print" 
+                  title="Export report as PDF"
+                >
+                  <Download size={12} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                  <span>PDF</span>
+                </button>
               </div>
-              <button 
-                onClick={() => window.print()} 
-                className="btn-pdf-export no-print" 
-                title="Export report as PDF"
-              >
-                <Download size={12} strokeWidth={2.5} style={{ flexShrink: 0 }} />
-                <span>PDF</span>
-              </button>
-            </div>
 
-            <div className="card-panel">
-              <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Guidelines Scorecard Summary</h4>
-              <EvaluationSummary
-                totalScore={report.total_score}
-                vibeStats={emotionVibeStats}
-                strengths={report.strengths}
-                improvements={report.improvements}
-              />
+              <div className="card-panel">
+                <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Guidelines Scorecard Summary</h4>
+                <EvaluationSummary
+                  totalScore={report.total_score}
+                  vibeStats={emotionVibeStats}
+                  strengths={report.strengths}
+                  improvements={report.improvements}
+                />
 
-              <div className="report-categories-list" style={{ marginTop: '1rem' }}>
-                {report.categories && report.categories.map((cat, idx) => (
-                  <EvaluationAccordion
-                    key={idx}
-                    cat={cat}
-                    results={results}
-                    isExpanded={expandedCategory === cat.name}
-                    onToggle={() => setExpandedCategory(expandedCategory === cat.name ? null : cat.name)}
-                  />
-                ))}
+                <div className="report-categories-list" style={{ marginTop: '1rem' }}>
+                  {report.categories && report.categories.map((cat, idx) => (
+                    <EvaluationAccordion
+                      key={idx}
+                      cat={cat}
+                      results={results}
+                      isExpanded={expandedCategory === cat.name}
+                      onToggle={() => setExpandedCategory(expandedCategory === cat.name ? null : cat.name)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* ── Audio Segment Feedback ── */}
-            {report.segment_comments && report.segment_comments.length > 0 && (
-              <div className="card-panel segment-feedback-section">
-                <h4 className="segment-feedback-title" style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Audio Segment Feedback</h4>
-                <div className="segment-feedback-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {report.segment_comments.map((seg, i) => {
-                    const transcriptRow = results.find(r => r.segment_id === seg.segment_id);
-                    return (
-                      <div key={i} className="segment-comment-card">
-                        <div className="segment-comment-header">
-                          <h5 className="segment-comment-title">
-                            {seg.segment_id != null
-                              ? `Segment ${seg.segment_id}${transcriptRow ? ` — ${transcriptRow.speaker}` : ''}`
-                              : (seg.comment.match(/^(SPEAKER_\d+)/) ? seg.comment.match(/^(SPEAKER_\d+)/)[1] : `Segment ${i + 1}`)}
-                          </h5>
+              {/* ── Audio Segment Feedback ── */}
+              {report.segment_comments && report.segment_comments.length > 0 && (
+                <div className="card-panel segment-feedback-section">
+                  <h4 className="segment-feedback-title" style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700 }}>Audio Segment Feedback</h4>
+                  <div className="segment-feedback-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {report.segment_comments.map((seg, i) => {
+                      const transcriptRow = results.find(r => r.segment_id === seg.segment_id);
+                      return (
+                        <div key={i} className="segment-comment-card">
+                          <div className="segment-comment-header">
+                            <h5 className="segment-comment-title">
+                              {seg.segment_id != null
+                                ? `Segment ${seg.segment_id}${transcriptRow ? ` — ${transcriptRow.speaker}` : ''}`
+                                : (seg.comment.match(/^(SPEAKER_\d+)/) ? seg.comment.match(/^(SPEAKER_\d+)/)[1] : `Segment ${i + 1}`)}
+                            </h5>
+                            {transcriptRow && (
+                              <button
+                                className="segment-comment-link"
+                                onClick={() => {
+                                  setActiveTab('pipeline');
+                                  jumpToSegment(seg.segment_id);
+                                }}
+                              >
+                                View in Dialogue Browser
+                              </button>
+                            )}
+                          </div>
                           {transcriptRow && (
-                            <button
-                              className="segment-comment-link"
-                              onClick={() => {
-                                setActiveTab('pipeline');
-                                jumpToSegment(seg.segment_id);
-                              }}
-                            >
-                              View in Dialogue Browser
-                            </button>
+                            <p className="segment-comment-quote">"{transcriptRow.text}"</p>
                           )}
+                          <p className="segment-comment-text">{seg.comment}</p>
                         </div>
-                        {transcriptRow && (
-                          <p className="segment-comment-quote">"{transcriptRow.text}"</p>
-                        )}
-                        <p className="segment-comment-text">{seg.comment}</p>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            {/* ── Admin Guidelines Management ── */}
+            {isAdmin && (
+              <div className="card-panel no-print" style={{ marginTop: '1.25rem' }}>
+                <h4 style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'Outfit, sans-serif' }}>
+                  <Target size={16} style={{ color: 'var(--accent)' }} />
+                  Manage Reference Guidelines
+                </h4>
+                <div className="rag-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'start' }}>
+                  
+                  {/* Left Column: Upload */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', margin: 0, lineHeight: '1.4' }}>
+                      Index new guideline rules (.pdf, .txt, .docx) into ChromaDB. This will update semantic benchmarking models for subsequent call analysis.
+                    </p>
+                    <div className="rag-controls" style={{ width: '100%' }}>
+                      <label className="file-select-label" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '0.6rem', border: '1px dashed var(--border-color)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>
+                        Choose Guideline File
+                        <input type="file" className="rag-file-input" accept=".txt,.pdf,.docx" onChange={handleRagFileChange} style={{ display: 'none' }} />
+                      </label>
+                      {ragFile && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--accent)', textAlign: 'center', wordBreak: 'break-all' }}>
+                          Selected: {ragFile.name}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      className="btn-pdf-export"
+                      disabled={!ragFile || ragLoading}
+                      onClick={handleRagUpload}
+                      style={{ width: '100%', height: '32px', fontSize: '0.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                    >
+                      {ragLoading ? "Indexing Guidelines..." : "Index Guidelines"}
+                    </button>
+
+                    {ragStatus && (
+                      <div className="rag-status-box" style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.15)', borderRadius: '6px', fontSize: '0.72rem', color: 'var(--text-light)', textAlign: 'center' }}>
+                        <p style={{ margin: 0 }}>{ragStatus}</p>
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
+
+                  {/* Right Column: Guidelines db info */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.78rem', color: 'var(--text-light)', lineHeight: '1.4' }}>
+                    <p style={{ margin: 0 }}>
+                      The active compliance database has semantic reference models for greeting etiquette, rapport validation, suggestions criticism, and active listening.
+                    </p>
+                    <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: '0.5rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                      Upload guideline changes will affect newly processed audio sessions only.
+                    </div>
+                  </div>
+
                 </div>
               </div>
             )}
           </div>
-        )}
-
-        {activeTab === 'guidelines' && isAdmin && (
-          <div className="workspace-rag">
-            <div className="rag-layout">
-              <div className="card-panel rag-upload-card">
-                <div className="upload-icon-wrapper">
-                  <svg className="upload-doc-icon" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" x2="8" y1="13" y2="13"></line>
-                    <line x1="16" x2="8" y1="17" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
-                  </svg>
-                </div>
-                <div className="upload-header-text">
-                  <h4>Compliance Guideline Upload</h4>
-                  <p>Upload a PDF or TXT compliance guidelines dictionary. SpeechInSight indexes segments using vectorized semantic search models into ChromaDB to benchmark call transcript quality.</p>
+        ) : (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 8rem)', width: '100%', margin: '0 auto', maxWidth: '1000px' }}>
+              <div className="card-panel" style={{ width: '100%', padding: '2.5rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+                  <div style={{ display: 'inline-flex', padding: '0.85rem', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '50%', color: 'var(--accent)', marginBottom: '1rem' }}>
+                    <Target size={32} />
+                  </div>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 0.5rem 0', fontFamily: 'Outfit, sans-serif' }}>RAG Compliance Guideline Hub</h3>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-light)', maxWidth: '550px', margin: '0 auto', lineHeight: '1.5' }}>
+                    SpeechInSight indexes standard compliance guidelines into ChromaDB semantic search vectorstores. Audit transcripts against reference models, acoustic signals, and emotion metrics.
+                  </p>
                 </div>
 
-                <div className="rag-controls">
-                  <label className="file-select-label" style={{ alignSelf: 'center' }}>
-                    Choose Guideline File
-                    <input type="file" className="rag-file-input" accept=".txt,.pdf,.docx" onChange={handleRagFileChange} />
-                  </label>
-                  {ragFile && <span className="selected-doc-name" style={{ textAlign: 'center', fontSize: '0.8rem' }}>{ragFile.name}</span>}
-                </div>
+                <div className="rag-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'start' }}>
+                  
+                  {/* Left Column: Indexing Upload */}
+                  <div className="card-panel rag-upload-card" style={{ margin: 0, padding: '1.5rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border-color)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <h5 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Download size={15} style={{ color: 'var(--accent)' }} /> 
+                      Reference Guideline Upload
+                    </h5>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                      Upload a PDF, TXT or DOCX document containing guidelines. The vectorizer will segment, index, and compile rules for each dialogue category.
+                    </p>
 
-                <button
-                  className="btn-primary"
-                  disabled={!ragFile || ragLoading}
-                  onClick={handleRagUpload}
-                  style={{ alignSelf: 'center', maxWidth: '280px' }}
-                >
-                  {ragLoading ? "Indexing Guidelines..." : "Index Guidelines"}
-                </button>
+                    {isAdmin ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                        <div className="rag-controls" style={{ width: '100%' }}>
+                          <label className="file-select-label" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '0.6rem', border: '1px dashed var(--border-color)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>
+                            Choose Guideline File
+                            <input type="file" className="rag-file-input" accept=".txt,.pdf,.docx" onChange={handleRagFileChange} style={{ display: 'none' }} />
+                          </label>
+                          {ragFile && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--accent)', textAlign: 'center', wordBreak: 'break-all' }}>
+                              Selected: {ragFile.name}
+                            </div>
+                          )}
+                        </div>
 
-                {ragStatus && (
-                  <div className="rag-status-box" style={{ marginTop: '1rem' }}>
-                    <p>{ragStatus}</p>
-                  </div>
-                )}
-              </div>
+                        <button
+                          className="btn-pdf-export"
+                          disabled={!ragFile || ragLoading}
+                          onClick={handleRagUpload}
+                          style={{ width: '100%', height: '36px', fontSize: '0.78rem', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--accent-glow)' }}
+                        >
+                          {ragLoading ? "Indexing Guidelines..." : "Index Guidelines"}
+                        </button>
 
-              <div className="guidelines-db-info">
-                <h4>Guidelines Mapped in Database</h4>
-                <p className="subtitle">Standard parameters verified during diarized turn auditing.</p>
+                        {ragStatus && (
+                          <div className="rag-status-box" style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.15)', borderRadius: '6px', fontSize: '0.72rem', color: 'var(--text-light)', textAlign: 'center' }}>
+                            <p style={{ margin: 0 }}>{ragStatus}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '6px', border: '1px solid var(--border-color)', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-light)', lineHeight: '1.4' }}>
+                        <AlertTriangle size={18} style={{ color: 'rgba(239, 68, 68, 0.7)', marginBottom: '0.35rem' }} />
+                        <div>Guidelines indexing is restricted to administrators. Contact your administrator to update compliance documents.</div>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="categories-grid">
-                  <div className="cat-db-card">
-                    <span className="cat-db-indicator orange" />
-                    <div className="cat-db-content">
-                      <h6>Warm Up Phase</h6>
-                      <p>Greeting etiquette, tone consistency, and building conversational rapport.</p>
+                  {/* Right Column: Guideline Database Details */}
+                  <div className="guidelines-db-info" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <h5 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.5rem 0' }}>
+                      Indexed Guideline Schema
+                    </h5>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <div className="cat-db-card" style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                        <span className="cat-db-indicator orange" style={{ width: '4px', height: '24px', background: '#f97316', borderRadius: '2px', flexShrink: 0 }} />
+                        <div>
+                          <h6 style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)' }}>Warm Up & Praise</h6>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-light)' }}>Greeter validation, speaker rapport, validation and supportive responses.</p>
+                        </div>
+                      </div>
+
+                      <div className="cat-db-card" style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                        <span className="cat-db-indicator green" style={{ width: '4px', height: '24px', background: '#10b981', borderRadius: '2px', flexShrink: 0 }} />
+                        <div>
+                          <h6 style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)' }}>Suggest & Direct</h6>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-light)' }}>Constructive criticism balance, directives, clear instruction auditing.</p>
+                        </div>
+                      </div>
+
+                      <div className="cat-db-card" style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                        <span className="cat-db-indicator blue" style={{ width: '4px', height: '24px', background: '#3b82f6', borderRadius: '2px', flexShrink: 0 }} />
+                        <div>
+                          <h6 style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)' }}>Active Listening & Template</h6>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-light)' }}>Feedback pause check, speaking ratio, dialogue phase progression.</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="cat-db-card">
-                    <span className="cat-db-indicator pink" />
-                    <div className="cat-db-content">
-                      <h6>Praise & Positivity</h6>
-                      <p>Validation of team efforts, supportive feedback, and reinforcement checks.</p>
+
+                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+                      <button 
+                        className="btn-pdf-export" 
+                        onClick={() => setActiveTab('pipeline')}
+                        style={{ padding: '0.45rem 1rem', height: 'auto', fontSize: '0.75rem', width: '100%', justifyContent: 'center' }}
+                      >
+                        Go to Dialogue Browser to Audit Audios
+                      </button>
                     </div>
+
                   </div>
-                  <div className="cat-db-card">
-                    <span className="cat-db-indicator green" />
-                    <div className="cat-db-content">
-                      <h6>Suggestions Balance</h6>
-                      <p>Ratio of positive vs. negative proposals, actionable critiques, and support.</p>
-                    </div>
-                  </div>
-                  <div className="cat-db-card">
-                    <span className="cat-db-indicator blue" />
-                    <div className="cat-db-content">
-                      <h6>Active Listening</h6>
-                      <p>Feedback pauses, junior turn indicators, backchannel support checking.</p>
-                    </div>
-                  </div>
+
                 </div>
               </div>
             </div>
-          </div>
+          )
         )}
+
+
       </main>
     </div>
   );

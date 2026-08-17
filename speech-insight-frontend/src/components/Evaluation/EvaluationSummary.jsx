@@ -1,6 +1,17 @@
 import React from 'react';
 import { CheckCircle2, AlertTriangle, Sparkles, AlertCircle, ShieldAlert } from 'lucide-react';
 
+const renderFormattedText = (text) => {
+  if (!text) return '';
+  const parts = text.split('**');
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return <strong key={index} style={{ fontWeight: 800, color: 'var(--text-main)' }}>{part}</strong>;
+    }
+    return part;
+  });
+};
+
 /**
  * EvaluationSummary — Redesigned Executive report header.
  * Visual hierarchy: Scorecard Card Widget (Score, Badge, Title, Description) -> Tone Profile -> Strengths & Recommendations Grid.
@@ -96,7 +107,7 @@ export const EvaluationSummary = React.memo(({ totalScore, vibeStats, strengths,
           <ul>
             {strengths && strengths.length > 0 ? (
               strengths.slice(0, 3).map((str, i) => (
-                <li key={i}>{str}</li>
+                <li key={i}>{renderFormattedText(str)}</li>
               ))
             ) : (
               <li>Perfect structural layout and positive speaking tones.</li>
@@ -112,7 +123,7 @@ export const EvaluationSummary = React.memo(({ totalScore, vibeStats, strengths,
           <ul>
             {improvements && improvements.length > 0 ? (
               improvements.slice(0, 3).map((imp, i) => (
-                <li key={i}>{imp}</li>
+                <li key={i}>{renderFormattedText(imp)}</li>
               ))
             ) : (
               <li>Continue maintaining balanced dialogue ratios and guideline compliance.</li>
