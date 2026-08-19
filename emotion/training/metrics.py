@@ -205,11 +205,12 @@ def render_report(results: dict) -> str:
         f"  samples scored     : {m['n']}",
         "",
         "  HEADLINE",
-        f"    macro F1         : {m['macro_f1']:.4f}   <- the number to beat"
+        f"    macro F1         : {m['macro_f1']:>6.2%}   <- the number to beat"
         f"  (over {m.get('classes_in_gold', len(m['labels']))} classes present in gold)",
-        f"    balanced accuracy: {m['balanced_accuracy']:.4f}",
-        f"    accuracy         : {m['accuracy']:.4f}",
-        f"    weighted F1      : {m['weighted_f1']:.4f}",
+        f"    balanced accuracy: {m['balanced_accuracy']:>6.2%}",
+        f"    accuracy         : {m['accuracy']:>6.2%}"
+        f"   ({round(m['accuracy'] * m['n'])}/{m['n']} correct)",
+        f"    weighted F1      : {m['weighted_f1']:>6.2%}",
     ]
 
     if m.get("missing_from_gold"):
@@ -220,10 +221,10 @@ def render_report(results: dict) -> str:
 
     if m["non_neutral_accuracy"] is not None:
         lines.append(
-            f"    non-neutral acc  : {m['non_neutral_accuracy']:.4f}"
+            f"    non-neutral acc  : {m['non_neutral_accuracy']:>6.2%}"
             f"   (on {m['non_neutral_n']} non-neutral samples)"
         )
-    lines.append(f"    predicted neutral: {m['predicted_neutral_rate']:.1%} of the time")
+    lines.append(f"    predicted neutral: {m['predicted_neutral_rate']:>6.2%} of the time")
 
     if "confidence" in m:
         c = m["confidence"]
@@ -240,8 +241,8 @@ def render_report(results: dict) -> str:
         # of zeros is not misread as "the model is bad at disgust".
         marker = "   (not in gold)" if stats["support"] == 0 else ""
         lines.append(
-            f"    {label:<10}{stats['precision']:>9.4f}{stats['recall']:>9.4f}"
-            f"{stats['f1']:>9.4f}{stats['support']:>9}{marker}"
+            f"    {label:<10}{stats['precision']:>9.2%}{stats['recall']:>9.2%}"
+            f"{stats['f1']:>9.2%}{stats['support']:>9}{marker}"
         )
 
     lines += ["", "  CONFUSION MATRIX  (rows = gold, cols = predicted)"]
@@ -273,7 +274,11 @@ def render_comparison(before: dict, after: dict, paired: dict | None = None) -> 
             return f"    {caption:<22}{_fmt(bv, 10)}{_fmt(av, 10)}{'—':>12}"
         delta = av - bv
         arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "=")
-        return f"    {caption:<22}{bv:>10.4f}{av:>10.4f}{arrow + f' {delta:+.4f}':>12}"
+        # Deltas are in percentage POINTS, not percent — a move from 47.8% to
+        # 52.6% is +4.8pp, not +10% relative. Labelling it "pp" keeps the two
+        # readings from being confused.
+        return (f"    {caption:<22}{bv:>10.2%}{av:>10.2%}"
+                f"{arrow + f' {delta * 100:+.2f}pp':>13}")
 
     lines = [
         "",
@@ -284,8 +289,8 @@ def render_comparison(before: dict, after: dict, paired: dict | None = None) -> 
         f"    after  : {a_name}  [{after.get('mode', '?')}]",
         f"    scored on {am['n']} shared samples",
         "",
-        f"    {'metric':<22}{'before':>10}{'after':>10}{'change':>12}",
-        "    " + "-" * 54,
+        f"    {'metric':<22}{'before':>10}{'after':>10}{'change':>13}",
+        "    " + "-" * 55,
         row("macro F1", "macro_f1"),
         row("balanced accuracy", "balanced_accuracy"),
         row("accuracy", "accuracy"),
@@ -294,21 +299,22 @@ def render_comparison(before: dict, after: dict, paired: dict | None = None) -> 
         row("predicted neutral rate", "predicted_neutral_rate"),
         "",
         "  PER-CLASS F1",
-        f"    {'label':<12}{'before':>10}{'after':>10}{'change':>12}{'support':>10}",
-        "    " + "-" * 54,
+        f"    {'label':<12}{'before':>10}{'after':>10}{'change':>13}{'support':>10}",
+        "    " + "-" * 55,
     ]
 
     for label in am["per_class"]:
         support = am["per_class"][label]["support"]
         if support == 0:
-            lines.append(f"    {label:<12}{'—':>10}{'—':>10}{'—':>12}{0:>10}   (not in gold)")
+            lines.append(f"    {label:<12}{'—':>10}{'—':>10}{'—':>13}{0:>10}   (not in gold)")
             continue
         bf = bm["per_class"].get(label, {}).get("f1", 0.0)
         af = am["per_class"][label]["f1"]
         delta = af - bf
         arrow = "▲" if delta > 0 else ("▼" if delta < 0 else "=")
         lines.append(
-            f"    {label:<12}{bf:>10.4f}{af:>10.4f}{arrow + f' {delta:+.4f}':>12}{support:>10}"
+            f"    {label:<12}{bf:>10.2%}{af:>10.2%}"
+            f"{arrow + f' {delta * 100:+.2f}pp':>13}{support:>10}"
         )
 
     if paired:
