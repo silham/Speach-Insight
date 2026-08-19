@@ -11,6 +11,7 @@ final_model/
 # Emotion model cache (downloaded at runtime — do not commit)
 emotion/models/
 emotion/checkpoints/
+emotion/data/
 
 # IDE files
 .idea/
